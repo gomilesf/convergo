@@ -54,6 +54,12 @@ function lineNumberAt(content: string, index: number): number {
   return content.slice(0, index).split("\n").length
 }
 
+function contentAfterMarker(content: string, marker: string): string {
+  const start = content.indexOf(marker)
+  expect(start, `missing marker: ${marker}`).toBeGreaterThanOrEqual(0)
+  return content.slice(start).trimEnd()
+}
+
 describe("skill conventions", () => {
   test("every skill has portable frontmatter", () => {
     for (const skill of listSkills()) {
@@ -83,6 +89,24 @@ describe("skill conventions", () => {
   test("skill markdown is English-only for public distribution", () => {
     for (const skill of listSkills()) {
       expect(skill.content.match(/[一-龥]/g), skill.path).toBeNull()
+    }
+  })
+
+  test("loop protocol references preserve canonical multi-session gates", () => {
+    const canonical = contentAfterMarker(
+      readFileSync(path.join(ROOT, PLATFORM_SKILL_ROOTS.source, "multi-session", "SKILL.md"), "utf8"),
+      "## Non-Negotiable Protocol Gates",
+    )
+
+    for (const relativePath of [
+      path.join(PLATFORM_SKILL_ROOTS.source, "plan-loop", "references", "multi-session-protocol.md"),
+      path.join(PLATFORM_SKILL_ROOTS.source, "build-loop", "references", "multi-session-protocol.md"),
+      path.join(PLATFORM_SKILL_ROOTS.codex, "plan-loop", "references", "multi-session-protocol.md"),
+      path.join(PLATFORM_SKILL_ROOTS.codex, "build-loop", "references", "multi-session-protocol.md"),
+    ]) {
+      const content = readFileSync(path.join(ROOT, relativePath), "utf8")
+
+      expect(contentAfterMarker(content, "## Non-Negotiable Protocol Gates"), relativePath).toBe(canonical)
     }
   })
 })
