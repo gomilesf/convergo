@@ -26,7 +26,7 @@ Record:
 - worktree or repo path,
 - current `git rev-parse HEAD` if available,
 - dirty worktree state,
-- source prompt and input documents,
+- source prompt or input document,
 - expected plan path or target docs directory when known.
 
 Classify dirty files:
@@ -46,16 +46,17 @@ Planner prompt must include:
 - role: planner,
 - destination orchestrator Codex thread id,
 - required planning skill, such as `cvg-plan` or another user-specified plan skill,
-- source prompt and exact user goal,
+- source prompt, requirements path, or exact user goal,
 - repo path and starting state,
-- dirty-state warning,
-- mandatory context documents,
-- task-triggered local instructions or domain skills,
+- dirty-state warning when present,
 - plan-only boundary,
 - output path rules,
-- no implementation, no staging, no commit unless explicitly requested,
+- task-specific external side-effect boundary,
 - callback transport block,
 - callback template.
+
+Do not restate the planning skill's process or paste broad repo rules, likely
+files, or local policy summaries unless they are the user's source authority.
 
 Planner callback template:
 
@@ -76,14 +77,17 @@ Reviewer prompt must include:
 - role: fresh plan reviewer,
 - destination orchestrator Codex thread id,
 - required cvg-plan-review skill, such as `cvg-plan-review`,
-- original planning goal and source prompt,
+- original planning goal or source prompt,
 - plan path,
-- repo path and relevant context,
-- mandatory context documents and local policies,
+- repo path,
 - read-only boundary,
 - blocker-only reporting rule,
+- task-specific external side-effect boundary,
 - callback transport block,
 - callback template.
+
+Do not paste the full planning prompt or all context documents when the plan
+links its authorities and the reviewer can read the worktree.
 
 Reviewer callback template:
 
@@ -118,13 +122,11 @@ The feedback prompt must include:
 - original planning goal and source prompt,
 - current plan path and related contracts,
 - exact reviewer blocker findings appended under a `Plan Review Feedback Input` section,
-- instruction to produce the `cvg-plan-review-feedback` intake summary before editing,
-- instruction to revise only valid plan-owned findings,
-- instruction to callback instead of editing when a missing behavior decision or reviewer clarification is required,
-- instruction to run the gates selected by `cvg-plan-review-feedback`,
-- unchanged scope boundaries,
+- task-specific external side-effect boundary,
 - callback transport block,
 - callback template.
+
+Do not restate the feedback skill's intake, classification, or revision rules.
 
 Create or update a heartbeat and end the active turn.
 
@@ -149,6 +151,10 @@ If same reviewer passes, do not exit. Continue to Phase 5.
 ## Phase 5: Final Fresh Review
 
 Create a new fresh reviewer Codex thread for a complete first review of the revised plan. Verify it with `read_thread`.
+
+Use the same minimal reviewer prompt shape from Phase 2. The new fresh reviewer
+must send its callback to the orchestrator with `send_message_to_thread`; do
+not ask it to leave the callback only in its own thread.
 
 Final exit condition:
 

@@ -8,7 +8,10 @@ argument-hint: "[goal, plan path, worktree, or workflow description]"
 
 Use this skill when the current Codex thread should act as an **orchestrator** over other real Codex threads. This is a protocol, not just a checklist.
 
-The workflow is repo-independent. Repo rules, local skills, runbooks, secrets policy, deployment rules, and domain-specific safety constraints are injected into specialist prompts as mandatory context.
+The workflow is repo-independent. Specialist prompts should carry only the
+coordination data the specialist cannot infer from the selected role skill and
+source artifact. Do not paste broad repo rules, likely-file lists, old phase
+state, or role-skill procedures unless they are task-specific authority.
 
 ## Non-Negotiable Protocol Gates
 
@@ -99,13 +102,22 @@ Every specialist prompt must include:
 - destination orchestrator Codex thread id,
 - worktree or repo path,
 - base/head refs when relevant,
-- dirty-state warning and unrelated files,
-- source documents, plans, behavior contracts, specs, or issue text,
+- dirty-state warning and unrelated files when present,
+- one source artifact or exact user input: plan path, requirements path, review
+  callback, or implementation goal,
 - required role skill,
-- mandatory repo rules and task-triggered local skills/runbooks,
-- safety boundaries and allowed external side effects,
+- task-specific external side-effect boundary, especially whether push, deploy,
+  remote smoke checks, secrets, or external environment/data changes are allowed,
 - exact callback transport block,
 - exact callback template.
+
+Do not include:
+
+- execution rules already owned by the required role skill,
+- duplicated authority lists when the plan or source artifact links them,
+- likely files or exhaustive surface checklists copied from the orchestrator,
+- old heartbeat payloads or previous phase instructions,
+- reviewer concerns unless this is a role-specific feedback prompt.
 
 Callback transport block:
 
@@ -126,6 +138,9 @@ Heartbeat prompts should say:
 - if still active, report one short status and continue waiting,
 - do not busy-wait,
 - delete or update the heartbeat when the phase is complete or stale.
+
+When updating a heartbeat for a new phase, replace the old instructions. Do not
+wrap or nest previous heartbeat payloads inside the new heartbeat prompt.
 
 ## Completion Summary
 

@@ -24,7 +24,7 @@ Record:
 - implementation base commit with `git rev-parse HEAD`,
 - worktree status,
 - task-owned and unrelated dirty files,
-- plan, behavior contract, specs, requirements, and triggered local policies,
+- source artifact or implementation goal,
 - allowed external side effects, if any.
 
 Pass unrelated dirty state to the worker and tell it not to overwrite those files.
@@ -42,25 +42,17 @@ Worker prompt must include:
 - required work skill, such as `cvg-work` or another user-specified implementation skill,
 - base commit,
 - worktree path,
-- dirty-state warning,
+- dirty-state warning when present,
 - plan path or implementation goal,
-- mandatory repo context and local policies,
-- implementation notes path when required,
-- safety boundaries,
-- per-slice execution requirement,
+- implementation notes path only when the plan or repo convention requires one,
+- task-specific external side-effect boundary,
 - callback transport block,
 - callback templates.
 
-Worker execution rules:
-
-- read repo rules, product/spec/design authority, plan, behavior contract, related code, and related tests,
-- use test-first or characterization-first posture required by the plan,
-- avoid horizontal "write all tests first, then all implementation",
-- work one slice at a time,
-- run checks for each slice plus system-wide checks,
-- make atomic commits when requested,
-- maintain implementation notes only for decisions, deviations, gaps, risks, and tradeoffs not already covered by the plan,
-- callback instead of silently changing scope when plan and code reality conflict.
+Do not restate `cvg-work` execution rules in the worker prompt. Do not paste
+likely files, broad surface checklists, previous reviewer risk hints, old
+commits, or repo policy summaries unless the user supplied them as task
+authority and they are not linked from the plan.
 
 Worker completion callback template:
 
@@ -86,15 +78,18 @@ Reviewer prompt must include:
 - destination orchestrator Codex thread id,
 - required cvg-code-review skill, such as `cvg-code-review`,
 - base commit and head commit,
-- plan and implementation notes,
+- plan path and implementation notes path when present,
 - `git diff <base>..HEAD`,
-- changed files in full,
-- related context files and tests,
 - read-only boundary,
 - blocker-only reporting rule,
-- safety and external-side-effect criteria,
+- task-specific external-side-effect boundary,
 - callback transport block,
 - callback template.
+
+Do not paste changed files in full when the reviewer can read the worktree.
+Provide changed file names or a diff stat only when useful for orientation.
+Do not include prior reviewer conclusions in a fresh review prompt except as
+risk areas to inspect after stating the review must be independent.
 
 Reviewer callback template:
 
@@ -127,16 +122,16 @@ Feedback prompt must include:
 - destination orchestrator Codex thread id,
 - reviewer thread id,
 - required feedback skill: `cvg-code-review-feedback`,
-- plan, behavior contract, implementation notes, base commit, review head, and current head,
+- plan path, implementation notes path when present, base commit, review head,
+  and current head,
 - exact reviewer blocker findings appended under a `Code Review Feedback Input` section,
-- instruction to produce the `cvg-code-review-feedback` intake summary before editing,
-- instruction to repair only implementation-owned findings under the accepted plan and contract,
-- instruction to stop and callback instead of patching when feedback exposes a plan gap, contract gap, systemic design gap, reviewer clarification need, or escalation need,
-- instruction that workers must never edit plans, contracts, surface matrices, or scope,
-- instruction to run the gates selected by `cvg-code-review-feedback`,
-- unchanged safety boundaries,
+- task-specific external-side-effect boundary,
 - callback transport block,
 - callback template.
+
+Do not restate the feedback skill's intake, classification, or repair rules.
+The exact findings under `Code Review Feedback Input` plus the required skill
+are the worker's authority.
 
 Worker feedback callback template:
 
@@ -169,6 +164,10 @@ Same reviewer pass is not enough to exit.
 
 After same reviewer passes, create a new fresh code reviewer thread for a complete first review. Verify it with `read_thread`.
 
+Use the same minimal reviewer prompt shape from Phase 2. The new fresh reviewer
+must send its callback to the orchestrator with `send_message_to_thread`; do
+not ask it to leave the callback only in its own thread.
+
 Final implementation exit condition:
 
 - new fresh reviewer,
@@ -185,7 +184,6 @@ QA worker prompt must include:
 
 - destination orchestrator Codex thread id,
 - exact versions under test,
-- environment and safety boundaries,
 - allowed external side effects,
 - evidence/report path,
 - stop-and-callback rule for failures,
