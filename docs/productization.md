@@ -79,14 +79,11 @@ Native plugin loaders discover skills from a plugin root. Compound Converge uses
 
 ### Auxiliary agents are vendored as a minimal closure
 
-The base DD-derived skills dispatch a small set of Compound Engineering auxiliary agents. Compound Converge vendors only the agents directly referenced by its public skills:
+The base DD-derived skills dispatch a small set of Compound Engineering auxiliary agents. Compound Converge vendors only the platform agents directly referenced by its public skills:
 
 ```text
 cvg-best-practices-researcher
 cvg-repo-research-analyst
-cvg-feasibility-reviewer
-cvg-security-lens-reviewer
-cvg-scope-guardian-reviewer
 cvg-correctness-reviewer
 cvg-testing-reviewer
 cvg-security-reviewer
@@ -95,6 +92,12 @@ cvg-reliability-reviewer
 ```
 
 Claude Code receives these under `plugins/claude/agents/*.agent.md`. Codex keeps the equivalent TOML agents under `plugins/codex/.codex/agents/compound-converge/*.toml`, and `bun run install:codex-agents` installs them into the active Codex root at `agents/compound-converge/*.toml` with `compound-converge/install-manifest.json`. Generic hosts still receive the base skills; when auxiliary delegation is unavailable, the skills instruct the active agent to perform the same checks itself.
+
+Plan-review personas are vendored differently: `cvg-plan-review` reads
+skill-local prompt assets from `references/personas/` and dispatches generic
+subagents when available. This keeps feasibility, security-lens, and
+scope-guardian review self-contained without depending on platform-level custom
+agent registration.
 
 ### Generated skill roots are committed
 
@@ -134,7 +137,7 @@ bun run sync
 bun run validate
 tmpdir=$(mktemp -d -t compound-converge-agents-XXXXXX)
 bun run install:codex-agents -- --codex-home "$tmpdir"
-test -f "$tmpdir/agents/compound-converge/cvg-feasibility-reviewer.toml"
+test -f "$tmpdir/agents/compound-converge/cvg-correctness-reviewer.toml"
 rm -rf "$tmpdir"
 bun test
 bun run plugin:validate

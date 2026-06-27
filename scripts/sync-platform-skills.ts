@@ -10,11 +10,8 @@ const AUXILIARY_AGENT_NAMES = [
   "cvg-adversarial-reviewer",
   "cvg-best-practices-researcher",
   "cvg-correctness-reviewer",
-  "cvg-feasibility-reviewer",
   "cvg-reliability-reviewer",
   "cvg-repo-research-analyst",
-  "cvg-scope-guardian-reviewer",
-  "cvg-security-lens-reviewer",
   "cvg-security-reviewer",
   "cvg-testing-reviewer",
 ].sort()

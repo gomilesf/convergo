@@ -151,22 +151,17 @@ discuss goal
 
 ## Auxiliary Agents
 
-The planning and review skills also ship a small auxiliary reviewer/researcher
-agent set adapted from Compound Engineering. CE already does this part well: it
-has strong reviewer and researcher personas for feasibility, security,
-correctness, testing, reliability, adversarial review, and repository research.
-Compound Converge vendors the subset it needs, namespaces them as `cvg-*`, and
-packages them for Claude Code and Codex so references such as
-`cvg-correctness-reviewer` and `cvg-best-practices-researcher` resolve without
-requiring the full Compound Engineering plugin.
+The planning and review skills also vendor a small auxiliary
+reviewer/researcher set adapted from Compound Engineering. Plan-review personas
+live as skill-local prompt assets under
+`cvg-plan-review/references/personas/`, so they do not depend on platform-level
+custom-agent registration. Planning research and code-review personas are still
+packaged as `cvg-*` agents for Claude Code and Codex.
 
 | Agent | Used by |
 | --- | --- |
 | `cvg-best-practices-researcher` | `/cvg-plan` |
 | `cvg-repo-research-analyst` | `/cvg-plan` |
-| `cvg-feasibility-reviewer` | `/cvg-plan-review` |
-| `cvg-security-lens-reviewer` | `/cvg-plan-review` |
-| `cvg-scope-guardian-reviewer` | `/cvg-plan-review` |
 | `cvg-correctness-reviewer` | `/cvg-code-review` |
 | `cvg-testing-reviewer` | `/cvg-code-review` |
 | `cvg-security-reviewer` | `/cvg-code-review` |

@@ -107,6 +107,26 @@ describe("skill conventions", () => {
     expect(referencedAuxiliaryAgents()).toEqual(AUXILIARY_AGENT_NAMES)
   })
 
+  test("plan review vendors CE-style persona prompt assets", () => {
+    for (const relativeRoot of SKILL_ROOTS) {
+      const planReviewDir = path.join(ROOT, relativeRoot, "cvg-plan-review")
+      const skillContent = readFileSync(path.join(planReviewDir, "SKILL.md"), "utf8")
+
+      for (const persona of ["feasibility-reviewer", "security-lens-reviewer", "scope-guardian-reviewer"]) {
+        expect(
+          readFileSync(path.join(planReviewDir, "references", "personas", `${persona}.md`), "utf8").trim().length,
+          `${relativeRoot}/${persona}`,
+        ).toBeGreaterThan(0)
+        expect(skillContent, `${relativeRoot}/${persona}`).toContain(`references/personas/<reviewer-name>.md`)
+      }
+
+      expect(skillContent).not.toContain("cvg-feasibility-reviewer")
+      expect(skillContent).not.toContain("cvg-security-lens-reviewer")
+      expect(skillContent).not.toContain("cvg-scope-guardian-reviewer")
+      expect(skillContent).toContain("Do not use typed agent names")
+    }
+  })
+
   test("loop protocol references preserve canonical cvg-multi-session gates", () => {
     const canonical = contentAfterMarker(
       readFileSync(path.join(ROOT, PLATFORM_SKILL_ROOTS.source, "cvg-multi-session", "SKILL.md"), "utf8"),

@@ -77,35 +77,63 @@ not just the plan document.
 - **Slice-invariant alignment:** Does each slice correspond to one invariant
   across all surfaces? Or are slices organized by component?
 
-### 3b. Dispatch auxiliary reviewers (optional, parallel with step 3)
+### 3b. Run auxiliary persona reviewers
 
-For standard and full plans, dispatch in parallel with your own step 3 checks:
+For standard and full plans, run auxiliary reviewers in parallel with your own
+step 3 checks. For brief plans, skip sub-agent dispatch and perform any needed
+checks inline.
 
-**Always dispatch:**
+Select reviewers:
 
-- `cvg-feasibility-reviewer` - "Review this plan for technical feasibility
-  against the codebase: <plan path>"
+- `feasibility-reviewer` - always selected for standard and full plans.
+- `security-lens-reviewer` - select when the plan touches auth, data handling,
+  external APIs, secrets, permissions, or trust boundaries.
+- `scope-guardian-reviewer` - select when the plan has many slices, adds new
+  abstractions, or feels broader than the issue.
 
-**When the plan touches auth, data handling, external APIs, or trust boundaries:**
+For each selected reviewer:
 
-- `cvg-security-lens-reviewer` - "Review this plan for security gaps:
-  <plan path>"
+1. Read the skill-local prompt asset at
+   `references/personas/<reviewer-name>.md`.
+2. Dispatch a generic subagent using the platform's subagent primitive when
+   available. Pass the persona file content, plan path, repo path, assessed
+   plan complexity, project stage guidance, and domain-risk override rule.
+3. Do not use typed agent names, `subagent_type`, or platform-level custom-agent
+   registration for these plan-review personas.
+4. If generic subagents are unavailable, run the same persona checks inline or
+   serially.
 
-**When the plan has many slices or scope feels broader than the issue:**
+Each persona reviewer is read-only. It may inspect the plan, linked contract,
+and codebase with non-mutating commands, but must not edit files, change
+branches, commit, push, or create external artifacts.
 
-- `cvg-scope-guardian-reviewer` - "Review this plan for scope alignment:
-  <plan path>"
+Ask each persona reviewer to return:
 
-When auxiliary delegation is available, run the relevant reviewers in parallel.
-If it is not available, perform the same checks yourself.
+```text
+Reviewer: <reviewer-name>
+Status: findings | no findings | blocked
+Findings:
+- Severity: P0 | P1 | P2
+  Evidence: <plan/code reference>
+  Issue: <plan-level gap>
+  Suggested plan change: <specific change>
+Residual risk: <optional>
+```
 
-When dispatching auxiliary reviewers, include the project stage and the
-domain-risk override rule in the sub-agent prompt.
-
-Merge their findings with yours in step 4. For brief plans, skip sub-agent
-dispatch.
+Merge their findings with yours in step 4. Continue when one persona fails or
+times out, but record the failure in the auxiliary coverage line.
 
 ### 4. Produce the review result
+
+Start with an auxiliary coverage line:
+
+```text
+Auxiliary coverage: feasibility-reviewer=<dispatched|inline|skipped|failed>, security-lens-reviewer=<dispatched|inline|skipped|failed>, scope-guardian-reviewer=<dispatched|inline|skipped|failed>
+```
+
+Use `skipped` for unselected reviewers and for all three reviewers on brief
+plans. If a selected reviewer ran inline because generic subagents were
+unavailable, use `inline`.
 
 If no blocking findings exist, the result is a clean plan verdict.
 
