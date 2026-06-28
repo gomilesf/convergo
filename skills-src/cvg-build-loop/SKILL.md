@@ -88,8 +88,11 @@ Reviewer prompt must include:
 
 Do not paste changed files in full when the reviewer can read the worktree.
 Provide changed file names or a diff stat only when useful for orientation.
-Do not include prior reviewer conclusions in a fresh review prompt except as
-risk areas to inspect after stating the review must be independent.
+Fresh reviewer prompts must not include a `Relevant review history` narrative,
+prior reviewer verdicts, prior findings, worker repair summaries, or
+same-reviewer pass/fail conclusions. If history matters, compress it into
+`Risk areas to inspect independently:` with filenames or behaviors only, after
+stating the review must be independent.
 
 Reviewer callback template:
 
@@ -166,7 +169,9 @@ After same reviewer passes, create a new fresh code reviewer thread for a comple
 
 Use the same minimal reviewer prompt shape from Phase 2. The new fresh reviewer
 must send its callback to the orchestrator with `send_message_to_thread`; do
-not ask it to leave the callback only in its own thread.
+not ask it to leave the callback only in its own thread. Do not include previous
+reviewer verdicts, blocker text, focused re-review results, or worker repair
+summaries; include only independent risk-area labels if needed.
 
 Final implementation exit condition:
 

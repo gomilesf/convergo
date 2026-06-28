@@ -127,6 +127,45 @@ describe("skill conventions", () => {
     }
   })
 
+  test("code review auxiliary reviewers keep raw JSON output boundaries", () => {
+    for (const relativeRoot of SKILL_ROOTS) {
+      const skillContent = readFileSync(path.join(ROOT, relativeRoot, "cvg-code-review", "SKILL.md"), "utf8")
+
+      expect(skillContent).toContain("Also include this output contract verbatim")
+      expect(skillContent).toContain("Do not consult project memory, prior sessions, rollout summaries, or")
+      expect(skillContent).toContain("Return exactly one raw JSON object matching the findings")
+      expect(skillContent).toContain("treat that auxiliary result as failed")
+    }
+
+    const reviewerAgents = AUXILIARY_AGENT_NAMES.filter((name) => name.endsWith("-reviewer"))
+    const agentRoots = [
+      { extension: ".agent.md", root: "agents-src/claude" },
+      { extension: ".toml", root: "agents-src/codex" },
+      { extension: ".agent.md", root: "plugins/claude/agents" },
+      { extension: ".toml", root: "plugins/codex/.codex/agents/compound-converge" },
+    ]
+
+    for (const agentRoot of agentRoots) {
+      for (const agentName of reviewerAgents) {
+        const content = readFileSync(path.join(ROOT, agentRoot.root, `${agentName}${agentRoot.extension}`), "utf8")
+
+        expect(content).toContain("do not consult project memory, prior sessions, rollout summaries, or")
+        expect(content).toContain("Return exactly one raw JSON object matching the findings schema")
+        expect(content).toContain("memory citations, or any text after the JSON")
+      }
+    }
+  })
+
+  test("build loop fresh reviewer prompts stay independent", () => {
+    for (const relativeRoot of [PLATFORM_SKILL_ROOTS.source, PLATFORM_SKILL_ROOTS.codex]) {
+      const skillContent = readFileSync(path.join(ROOT, relativeRoot, "cvg-build-loop", "SKILL.md"), "utf8")
+
+      expect(skillContent).toContain("Fresh reviewer prompts must not include a `Relevant review history` narrative")
+      expect(skillContent).toContain("`Risk areas to inspect independently:`")
+      expect(skillContent).toContain("reviewer verdicts, blocker text, focused re-review results")
+    }
+  })
+
   test("loop protocol references preserve canonical cvg-multi-session gates", () => {
     const canonical = contentAfterMarker(
       readFileSync(path.join(ROOT, PLATFORM_SKILL_ROOTS.source, "cvg-multi-session", "SKILL.md"), "utf8"),

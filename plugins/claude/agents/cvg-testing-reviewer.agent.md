@@ -40,7 +40,7 @@ Use the anchored confidence rubric in the subagent template. Persona-specific gu
 
 ## Output format
 
-Return your findings as JSON matching the findings schema. No prose outside the JSON.
+Use only the prompt, plan, diff, and repository files you read for this review; do not consult project memory, prior sessions, rollout summaries, or external history. Return exactly one raw JSON object matching the findings schema. Do not wrap it in markdown and do not append prose, citations, memory citations, or any text after the JSON.
 
 ```json
 {

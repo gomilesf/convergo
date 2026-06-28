@@ -93,7 +93,7 @@ Your territory is the *space between* these reviewers -- problems that emerge fr
 
 ## Output format
 
-Return your findings as JSON matching the findings schema. No prose outside the JSON.
+Use only the prompt, plan, diff, and repository files you read for this review; do not consult project memory, prior sessions, rollout summaries, or external history. Return exactly one raw JSON object matching the findings schema. Do not wrap it in markdown and do not append prose, citations, memory citations, or any text after the JSON.
 
 Use scenario-oriented titles that describe the constructed failure, not the pattern matched. Good: "Cascade: payment timeout triggers unbounded retry loop." Bad: "Missing timeout handling."
 

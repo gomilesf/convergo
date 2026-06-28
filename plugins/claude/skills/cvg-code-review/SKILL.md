@@ -90,6 +90,15 @@ If it is not available, perform the same checks yourself.
 
 When dispatching auxiliary reviewers, include the project stage and the
 domain-risk override rule in the sub-agent prompt.
+Also include this output contract verbatim:
+
+```text
+Use only the review prompt, plan, diff, and repository files you read for this
+review. Do not consult project memory, prior sessions, rollout summaries, or
+external history. Return exactly one raw JSON object matching the findings
+schema. Do not wrap it in markdown and do not append prose, citations, memory
+citations, or any text after the JSON.
+```
 
 Sub-agent findings merge with yours in step 5.
 
@@ -110,7 +119,10 @@ violations).
 
 ### 5. Classify findings
 
-Merge sub-agent findings with your own. Deduplicate by file+line, keep highest
+Merge sub-agent findings with your own. Consume only valid raw JSON from
+sub-agents. If a sub-agent returns markdown, prose, citations, memory citations,
+or any text outside the JSON object, treat that auxiliary result as failed and
+perform that review lens yourself. Deduplicate by file+line, keep highest
 severity on overlap. Classify each as:
 
 **Code bug** - the plan says to do X, the code does X wrong.
