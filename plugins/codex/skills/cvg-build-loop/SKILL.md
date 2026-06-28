@@ -54,16 +54,19 @@ likely files, broad surface checklists, previous reviewer risk hints, old
 commits, or repo policy summaries unless the user supplied them as task
 authority and they are not linked from the plan.
 
+After verifying the worker thread with `read_thread`, send the worker its
+verified thread id before creating the heartbeat.
+
 Worker completion callback template:
 
 ```text
-I am the worker. My session/thread id is <id or thread id not exposed>. Orchestrator thread id: <orchestrator-id>. This implementation round is complete. Base commit: <base>. Head commit: <head>. Key changes: <brief>. Verification: <commands/results>. Known gaps: <none or list>. Please arrange a fresh code reviewer.
+I am the worker. My session/thread id is <worker-thread-id>. Orchestrator thread id: <orchestrator-id>. This implementation round is complete. Base commit: <base>. Head commit: <head>. Key changes: <brief>. Verification: <commands/results>. Known gaps: <none or list>. Please arrange a fresh code reviewer.
 ```
 
 Worker blocker callback template:
 
 ```text
-I am the worker. My session/thread id is <id or thread id not exposed>. Orchestrator thread id: <orchestrator-id>. I found a blocking contract gap. Gap: <id/summary>. Evidence: <files/tests>. Recommendation: <repair/escalation>. Please decide the next step.
+I am the worker. My session/thread id is <worker-thread-id>. Orchestrator thread id: <orchestrator-id>. I found a blocking contract gap. Gap: <id/summary>. Evidence: <files/tests>. Recommendation: <repair/escalation>. Please decide the next step.
 ```
 
 After verifying the worker thread, create or update a heartbeat and end the active turn. Do not use `sleep` or repeated `read_thread` to wait.
@@ -75,6 +78,7 @@ After worker callback is visible in the orchestrator thread, create a fresh revi
 Reviewer prompt must include:
 
 - role: fresh code reviewer,
+- the line `Do not consult project memory, prior sessions, rollout summaries, or external history.` before the required skill line,
 - destination orchestrator Codex thread id,
 - required cvg-code-review skill, such as `cvg-code-review`,
 - review mode when this reviewer is the final exit gate,
@@ -98,8 +102,11 @@ stating the review must be independent.
 Reviewer callback template:
 
 ```text
-I am the fresh code reviewer. My session/thread id is <id or thread id not exposed>. Orchestrator thread id: <orchestrator-id>. This first-pass full code review is complete. Verdict: <ready / not ready>. Findings: <none or numbered blocker list>. Please decide the next step.
+I am the fresh code reviewer. My session/thread id is <reviewer-thread-id>. Orchestrator thread id: <orchestrator-id>. This first-pass full code review is complete. Verdict: <ready / not ready>. Findings: <none or numbered blocker list>. Please decide the next step.
 ```
+
+After verifying the reviewer thread with `read_thread`, send the reviewer its
+verified thread id before creating the heartbeat.
 
 Create or update a heartbeat and end the active turn while waiting. Do not manually poll.
 
@@ -140,7 +147,7 @@ are the worker's authority.
 Worker feedback callback template:
 
 ```text
-I am the worker. My session/thread id is <id or thread id not exposed>. Orchestrator thread id: <orchestrator-id>. Code review feedback handling is complete. Base commit: <base>. Previous review head: <old>. New head commit: <new>. Code-review-feedback result: <repaired / plan gap / contract gap / systemic design gap / escalation / clarification needed>. Fixed findings: <brief or none>. Verification: <commands/results>. Known gaps: <none or list>. Please arrange the next review step.
+I am the worker. My session/thread id is <worker-thread-id>. Orchestrator thread id: <orchestrator-id>. Code review feedback handling is complete. Base commit: <base>. Previous review head: <old>. New head commit: <new>. Code-review-feedback result: <repaired / plan gap / contract gap / systemic design gap / escalation / clarification needed>. Fixed findings: <brief or none>. Verification: <commands/results>. Known gaps: <none or list>. Please arrange the next review step.
 ```
 
 Create or update a heartbeat and end the active turn.
@@ -159,6 +166,15 @@ Focused scope:
 - inspect new repair diff,
 - check whether new code introduced P0/P1 issues,
 - if a contract or plan update changed a matrix, re-check only related matrix rows.
+
+Focused re-review prompt must include:
+
+- `Review mode: focused-re-review`,
+- `Do not consult project memory, prior sessions, rollout summaries, or external history.`
+
+Focused re-review does not require auxiliary reviewers. Do not ask the focused
+reviewer to dispatch auxiliary reviewers or synthesize inline auxiliary
+coverage.
 
 Create or update a heartbeat and end the active turn.
 

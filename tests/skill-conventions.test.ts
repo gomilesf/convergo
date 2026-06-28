@@ -167,6 +167,8 @@ describe("skill conventions", () => {
       expect(skillContent).toContain("Final fresh exit mode")
       expect(skillContent).toContain("inline auxiliary coverage cannot produce a final exit pass")
       expect(skillContent).toContain("degraded auxiliary coverage")
+      expect(skillContent).toContain("Skip this step for `Review mode: focused-re-review`")
+      expect(skillContent).toContain("Do not write inline auxiliary reviewer artifacts")
       expect(skillContent).toContain('"agent_role": "<requested agent_type, for example cvg-security-reviewer>"')
       expect(skillContent).toContain('"agent_id": "<spawn_agent id, child session id, or null>"')
       expect(skillContent).toContain('"thread_id": "<child thread/session id when exposed, or null>"')
@@ -197,10 +199,15 @@ describe("skill conventions", () => {
       const skillContent = readFileSync(path.join(ROOT, relativeRoot, "cvg-build-loop", "SKILL.md"), "utf8")
 
       expect(skillContent).toContain("Fresh reviewer prompts must not include a `Relevant review history` narrative")
+      expect(skillContent).toContain("Do not consult project memory, prior sessions, rollout summaries, or external history.")
+      expect(skillContent).toContain("After verifying the reviewer thread with `read_thread`, send the reviewer its")
+      expect(skillContent).toContain("Review mode: focused-re-review")
+      expect(skillContent).toContain("Do not ask the focused")
       expect(skillContent).toContain("`Risk areas to inspect independently:`")
       expect(skillContent).toContain("reviewer verdicts, blocker text, focused re-review results")
       expect(skillContent).toContain("Review mode: final-fresh-exit")
       expect(skillContent).toContain("inline auxiliary coverage cannot satisfy the final implementation exit condition")
+      expect(skillContent).not.toContain("not exposed")
     }
   })
 
@@ -232,6 +239,7 @@ describe("skill conventions", () => {
       "Use `create_thread` to create a new specialist thread unless the user explicitly named an existing Codex thread.",
       "Use `send_message_to_thread` to continue an existing specialist thread.",
       "Use `read_thread` to verify every specialist thread id immediately after creation or selection.",
+      "Your verified Codex thread id is <specialist-thread-id>",
       "Do not use multi-agent subagents, task agents, context-fork agents, local shell jobs, or background processes as substitutes.",
       "If `read_thread` cannot read the id, stop the workflow and retry with Codex thread tools or report a tool-layer blocker.",
       "The specialist must send its callback to the orchestrator thread.",
@@ -246,5 +254,7 @@ describe("skill conventions", () => {
     ]) {
       expect(canonical).toContain(requiredText)
     }
+
+    expect(canonical).not.toContain("not exposed")
   })
 })

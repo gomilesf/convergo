@@ -20,12 +20,17 @@ Specialists must run in monitorable Codex threads.
 - Use `create_thread` to create a new specialist thread unless the user explicitly named an existing Codex thread.
 - Use `send_message_to_thread` to continue an existing specialist thread.
 - Use `read_thread` to verify every specialist thread id immediately after creation or selection.
+- For a newly created specialist, send a short identity note after `read_thread`
+  succeeds: `Your verified Codex thread id is <specialist-thread-id>. Use this
+  exact id in callbacks.`
 - Do not use multi-agent subagents, task agents, context-fork agents, local shell jobs, or background processes as substitutes.
 - Do not treat a subagent id, job id, process id, local session id, or model-generated id as a Codex thread id.
 - If `read_thread` cannot read the id, stop the workflow and retry with Codex thread tools or report a tool-layer blocker.
 - If Codex thread tools are not loaded, search for `create_thread`, `send_message_to_thread`, and `read_thread` first. If they still cannot be loaded, report a tool-layer blocker.
 
-The authoritative specialist identity is the id returned by `create_thread` or the source thread on a callback message, not whatever the specialist writes in prose.
+The authoritative specialist identity is the id returned by `create_thread` or
+the source thread on a callback message, not whatever the specialist writes in
+prose. Do not accept placeholder specialist identity in callback templates.
 
 ### Gate 2: Orchestrator Callback Transport
 
@@ -42,7 +47,8 @@ The specialist must send its callback to the orchestrator thread. A final answer
 
 If the specialist creates or receives an audit artifact, the callback must include `Audit artifact: <absolute path>`.
 
-If the specialist cannot see its own thread id, it may write `thread id not exposed` in the callback body. That is acceptable only when the callback is delivered to the orchestrator thread; the orchestrator verifies source identity with `read_thread`.
+The specialist must use the verified thread id supplied by the orchestrator in
+its callback body.
 
 If `send_message_to_thread` is unavailable inside the specialist thread, the specialist must say `callback transport failed` in its final answer and include the exact callback text for manual relay.
 
@@ -56,9 +62,11 @@ Handoff sequence:
 
 1. Send the specialist work with `create_thread` or `send_message_to_thread`.
 2. Verify the specialist thread once with `read_thread`.
-3. Create or update a heartbeat automation for the current orchestrator thread.
-4. Tell the user the specialist thread id and heartbeat id.
-5. End the active turn.
+3. For newly created threads, send the verified specialist thread id to that
+   thread.
+4. Create or update a heartbeat automation for the current orchestrator thread.
+5. Tell the user the specialist thread id and heartbeat id.
+6. End the active turn.
 
 If heartbeat automation tools are not loaded, search for `automation_update` first. If no heartbeat tool is available, tell the user the fallback is unavailable and end the turn after one verified handoff; do not replace the missing heartbeat with manual polling.
 

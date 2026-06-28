@@ -39,7 +39,9 @@ Classify dirty files:
 
 Create the planner as a real Codex thread with `create_thread`.
 
-Immediately verify the returned planner thread id with `read_thread`. If it is not readable, do not continue.
+Immediately verify the returned planner thread id with `read_thread`. If it is
+not readable, do not continue. After verification, send the planner its verified
+thread id before creating the heartbeat.
 
 Planner prompt must include:
 
@@ -61,7 +63,7 @@ files, or local policy summaries unless they are the user's source authority.
 Planner callback template:
 
 ```text
-I am the planner. My session/thread id is <id or thread id not exposed>. Orchestrator thread id: <orchestrator-id>. This planning round is complete. Plan path: <absolute path>. Key status: <brief>. Please decide the next step.
+I am the planner. My session/thread id is <planner-thread-id>. Orchestrator thread id: <orchestrator-id>. This planning round is complete. Plan path: <absolute path>. Key status: <brief>. Please decide the next step.
 ```
 
 After verifying the planner thread, create or update a heartbeat and end the active turn. Do not use `sleep` or repeated `read_thread` to wait.
@@ -75,6 +77,7 @@ Immediately verify the reviewer thread id with `read_thread`.
 Reviewer prompt must include:
 
 - role: fresh plan reviewer,
+- the line `Do not consult project memory, prior sessions, rollout summaries, or external history.` before the required skill line,
 - destination orchestrator Codex thread id,
 - required cvg-plan-review skill, such as `cvg-plan-review`,
 - original planning goal or source prompt,
@@ -92,8 +95,11 @@ links its authorities and the reviewer can read the worktree.
 Reviewer callback template:
 
 ```text
-I am the fresh reviewer. My session/thread id is <id or thread id not exposed>. Orchestrator thread id: <orchestrator-id>. This first-pass full review is complete. Verdict: <passed / blocking findings>. Findings: <none or numbered concise list>. Please decide the next step.
+I am the fresh reviewer. My session/thread id is <reviewer-thread-id>. Orchestrator thread id: <orchestrator-id>. This first-pass full review is complete. Verdict: <passed / blocking findings>. Findings: <none or numbered concise list>. Please decide the next step.
 ```
+
+After verifying the reviewer thread with `read_thread`, send the reviewer its
+verified thread id before creating the heartbeat.
 
 Create or update a heartbeat and end the active turn while waiting. Do not manually poll.
 

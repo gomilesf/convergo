@@ -77,6 +77,10 @@ The artifact directory is the durable audit record for this review run.
 
 ### 3. Dispatch auxiliary reviewers (parallel with step 4)
 
+Skip this step for `Review mode: focused-re-review`. Focused re-review is a
+scoped check of prior findings plus the repair diff; it must not dispatch
+auxiliary reviewers or synthesize inline auxiliary coverage.
+
 Dispatch sub-agent reviewers in parallel with your own step 4 review.
 
 **Always dispatch (both in parallel):**
@@ -252,6 +256,15 @@ For "not ready", include every blocking finding you can see in one pass. For
   primary cause of non-convergence.
 
 ## Re-review after fixes
+
+Focused re-review mode overrides the full-review artifact shape:
+
+- Do not dispatch auxiliary reviewers.
+- Do not write inline auxiliary reviewer artifacts.
+- Do not include an `Auxiliary coverage:` response line.
+- If an audit artifact is required, write only focused `review.json` and
+  `metadata.json` with `review_mode: "focused-re-review"`, verdict, findings,
+  checks, branch, head sha, and completed timestamp.
 
 Same-reviewer recheck is exhaustive within recheck scope: verify the old
 findings, check the fix diff and newly changed code for new P0/P1 issues, and
