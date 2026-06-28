@@ -117,6 +117,9 @@ describe("skill conventions", () => {
       expect(skillContent).toContain("The returned response must be one raw JSON object only")
       expect(skillContent).toContain("/tmp/compound-converge/cvg-plan-review/<run-id>/review.json")
       expect(skillContent).toContain("/tmp/compound-converge/cvg-plan-review/<run-id>/metadata.json")
+      expect(skillContent).toContain("Main reviewer must not consult project memory, prior sessions, rollout summaries, or external history.")
+      expect(skillContent).toContain("Do not consult project memory, prior sessions, rollout summaries, or external history.")
+      expect(skillContent).toContain("Do not cite memory or include memory citations.")
       expect(skillContent).toContain("Auxiliary coverage must be an object keyed by reviewer name")
       expect(skillContent).toContain("Do not collapse selected reviewers to plain status strings")
       expect(skillContent).toContain('"agent_role": "generic-subagent"')
@@ -150,6 +153,8 @@ describe("skill conventions", () => {
       const skillContent = readFileSync(path.join(ROOT, relativeRoot, "cvg-code-review", "SKILL.md"), "utf8")
 
       expect(skillContent).toContain("Also include this output contract verbatim")
+      expect(skillContent).toContain("Main reviewer must not consult project memory, prior sessions, rollout summaries, or external history.")
+      expect(skillContent).toContain("Do not cite memory or include memory citations.")
       expect(skillContent).toContain("Do not consult project memory, prior sessions, rollout summaries, or")
       expect(skillContent).toContain("/tmp/compound-converge/cvg-code-review/$RUN_ID")
       expect(skillContent).toContain("/tmp/compound-converge/cvg-code-review/<run-id>/<reviewer-name>.json")

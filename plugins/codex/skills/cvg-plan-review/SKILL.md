@@ -14,6 +14,10 @@ incomplete invariants, wrong slice boundaries, and over-designed scope.
 The task context provides the plan path. Read the plan document and any linked
 behavior contract.
 
+Fresh-review evidence boundary: Main reviewer must not consult project memory, prior sessions, rollout summaries, or external history.
+Use only explicit task input, the plan, linked contract, repo files read during
+this review, and test/build output produced in this run. Do not cite memory or include memory citations.
+
 ## Stage Calibration
 
 Read project stage guidance from the task context before applying this skill.
@@ -107,8 +111,8 @@ For each selected reviewer:
 2. Dispatch a generic subagent using the platform's subagent primitive when
    available. Pass the persona file content, plan path, repo path, assessed
    plan complexity, project stage guidance, domain-risk override rule, run id,
-   and the reviewer artifact path. Replace `<run-id>` and `<reviewer-name>`
-   with the actual values before dispatch.
+   the fresh-review evidence boundary, and the reviewer artifact path. Replace
+   `<run-id>` and `<reviewer-name>` with the actual values before dispatch.
 3. Do not use typed agent names, `subagent_type`, or platform-level custom-agent
    registration for these plan-review personas.
 4. If generic subagents are unavailable, run the same persona checks inline or
@@ -146,6 +150,14 @@ Each persona reviewer is read-only. It may inspect the plan, linked contract,
 and codebase with non-mutating commands, but must not edit files, change
 branches, commit, push, or create external artifacts except its own audit JSON
 under `/tmp/compound-converge/cvg-plan-review/<run-id>/`.
+
+Every persona prompt must include this boundary:
+
+```text
+Do not consult project memory, prior sessions, rollout summaries, or external history.
+Use only explicit task input, the plan, linked contract, and repo files read during this review.
+Do not cite memory or include memory citations.
+```
 
 Ask each persona reviewer to return:
 

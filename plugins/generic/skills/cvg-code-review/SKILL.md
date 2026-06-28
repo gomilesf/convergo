@@ -47,6 +47,11 @@ Read:
 - The diff (`git diff <base>..HEAD`)
 - Changed files in full, not just diff hunks; context matters
 
+Fresh-review evidence boundary: Main reviewer must not consult project memory, prior sessions, rollout summaries, or external history.
+Use only explicit task input, the plan, linked contract, repo-local
+implementation notes, current diff, repo files read during this review, and
+test/build output produced in this run. Do not cite memory or include memory citations.
+
 ### 2. Establish intent
 
 Write a 2-3 line intent summary after reading the plan and implementation
