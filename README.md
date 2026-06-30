@@ -2,7 +2,7 @@
 
 > Coding-agent **plan → review → build** loops that actually terminate.
 
-![Convergo turns diverging agent review loops into a converging plan / review / build loop with a fresh-reviewer exit gate](docs/assets/convergo-hero.png)
+<!-- hero image: diverging-vs-converging loop diagram (docs/assets/convergo-hero.png) — pending from Iris -->
 
 **Convergo** is an opinionated, convergence-focused fork of
 [Compound Engineering](https://github.com/EveryInc/compound-engineering-plugin)
