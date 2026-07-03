@@ -7,103 +7,154 @@
 
 <!-- hero image: diverging-vs-converging loop diagram (docs/assets/convergo-hero.png) — pending from Iris -->
 
-**Convergo** is an opinionated, convergence-focused fork of
+**Convergo** is a convergence-focused fork of
 [Compound Engineering](https://github.com/EveryInc/compound-engineering-plugin)
-(CE): sliced plans with done-when criteria, TDD implementation, and review
-loops that exit only when an independent fresh reviewer reports no blockers.
-**Who it's for:** engineers doing correctness-critical, reviewable work with AI
-coding agents — not quick spikes or throwaway prototypes.
+(CE) — the plan-first, test-first, review-everything discipline for coding
+agents. CE gets the shape right; Convergo makes the loops terminate. Its one
+non-negotiable exit rule: nothing ships until a **fresh reviewer** — a newly
+spawned reviewer session with no prior review context — completes a full pass
+and reports no blockers.
+
+**Who it's for:** engineers doing correctness-critical, reviewable work with
+AI coding agents. Not for quick spikes or throwaway prototypes — see
+[Cost and Fit](#cost-and-fit).
 
 ## Quick Start
 
-Claude Code:
+Claude Code — everything ships with the plugin:
 
 ```text
 /plugin marketplace add gomilesf/convergo
 /plugin install convergo
 ```
 
-Codex CLI:
+Codex — the plugin installs from the marketplace, but the auxiliary reviewer
+agents need a one-time install from a checkout (they cannot ship through the
+Codex marketplace):
 
 ```bash
 codex plugin marketplace add gomilesf/convergo
-codex   # then /plugins -> Convergo -> install convergo, restart
-bun run install:codex-agents   # auxiliary agents, from a checkout of this repo
+codex        # inside: /plugins -> Convergo -> install convergo
+
+git clone https://github.com/gomilesf/convergo && cd convergo
+bun install && bun run install:codex-agents
+# restart Codex
 ```
 
-Every supported host and option: [Install](#install).
+Then, in a repo with an issue to work on:
+
+```text
+/cvg-plan-loop create a plan for issue #42
+... review the plan yourself ...
+/cvg-build-loop docs/plans/42-plan.md
+```
+
+Every other host and option: [Install](#install).
 
 ## The Problem
 
-CE's discipline is right: plan before implementation, execute with tests,
-review to catch issues. But in real codebases an unbounded review loop can fail
-to settle, and the failure mode is not "the reviewer found a bug" — that is
-expected. The failure mode is non-convergence:
+An unbounded agent review loop can fail to settle, and the failure mode is not
+"the reviewer found a bug" — that is expected. The failure mode is
+non-convergence:
 
-- plan review discovers one symptom at a time instead of the underlying missing
-  surface, invariant, or behavior decision;
+- plan review discovers one symptom at a time instead of the underlying
+  missing surface, invariant, or behavior decision;
 - the planner responds by adding more text instead of repairing the structure
   of the plan;
 - code review pushes the worker into local patches even when the feedback is
   really a plan gap, contract gap, or systemic design gap;
 - repeated rounds make the artifact larger, less precise, and more likely to
-  accumulate pseudo-code — which then creates a new class of review failures.
+  accumulate pseudo-code — which creates a new class of review failures.
 
 One missing invariant across eight surfaces should become one plan repair, not
 eight rounds of local patches.
 
+## What a Run Looks Like
+
+`/cvg-build-loop docs/plans/rate-limit-plan.md` on Claude Code, condensed:
+
+```text
+orchestrator  records base commit and worktree state,
+              spawns a WORKER session with the plan, ends its turn (no polling)
+
+worker        implements slice by slice with TDD, one commit per slice,
+              keeps impl notes for the reviewer
+              -> "Implementation round complete. Base a1b2c3, head d4e5f6.
+                  Verification: 41 tests pass. Known gaps: none."
+
+orchestrator  spawns a FRESH REVIEWER session
+
+reviewer      reads plan + diff, dispatches correctness/testing sub-reviewers,
+              merges their JSON findings
+              -> "Not ready. F1 (P1): retry path drops the rate-limit header.
+                  F2: plan never decided burst behavior — contract gap."
+
+orchestrator  returns the findings verbatim to the SAME worker session
+
+worker        intake first, then repair: F1 is implementation-owned -> fixes it
+              F2 is a contract gap -> STOPS and reports instead of patching
+              around the missing decision
+
+you           decide burst behavior (or send it back through the planner)
+
+worker        finishes the repair -> new head commit
+reviewer      same session, focused re-review of the fixes -> pass
+orchestrator  spawns a NEW fresh reviewer for a full first pass
+fresh review  -> "Ready with fixes. No blockers. Two P2 notes."
+orchestrator  exits the loop: base -> head, findings history, P2 list for you
+```
+
+Three properties make this a loop and not a spiral: the worker never patches
+around a missing decision, review feedback goes back to the session that has
+the context, and the exit judgment always comes from a reviewer who has never
+seen the code before.
+
 ## How Convergo Converges
 
-Every rule below exists to bound the loop. They are enforced in the skills, not
-just described here.
+Every rule below is enforced in the skills, not just described here.
 
-**Feedback goes through intake, not straight to edits.** When review blockers
-arrive, the same planner or worker that produced the artifact first classifies
-each finding — local code bug, pattern bug, verification gap, plan gap,
+**Feedback goes through intake, not straight to edits.** The planner or worker
+that produced the artifact classifies each finding first — code bug, plan gap,
 contract gap, systemic design gap, stale, or blocked on a missing decision —
-and only then repairs what its role owns. Workers stop and call back on plan,
-contract, and systemic gaps instead of patching forward. This intake step is
-the core difference from a naive review loop.
+and repairs only what its role owns. Workers stop and call back on plan,
+contract, and systemic gaps instead of patching forward.
 
-**Findings carry evidence, not vibes.** Code-review sub-reviewers return
-findings against a shared schema (`P0`–`P3` severity, discrete confidence
-anchors `0/25/50/75/100`, a quote-the-line gate for high-confidence claims).
-Low-confidence findings are dropped at merge unless they are critical.
-Reviewers run under a fresh-review evidence boundary: no project memory, no
-prior sessions, no rollout history — only the plan, the diff, and the repo.
+**Findings carry evidence, not vibes.** Sub-reviewers return findings against
+a shared schema: `P0`–`P3` severity, discrete confidence anchors, a
+quote-the-line gate for high-confidence claims. Low-confidence findings are
+dropped at merge unless they are critical. Reviewers run under a fresh-review
+evidence boundary — no project memory, no prior sessions, no rollout history;
+only the plan, the diff, and the repo.
 
 **Exit requires a fresh reviewer.** A same-reviewer pass is never the exit
-condition. After repairs, the original reviewer does a focused re-review; the
-loop exits only when a *newly spawned* reviewer with no prior review context
-completes a full first pass with no blockers. "Ready with fixes" (only
-non-blocking P2 notes remain) counts as passing — the loop does not churn on
-nitpicks.
+condition. After repairs, the original reviewer re-reviews the fixes; the loop
+exits only when a newly spawned reviewer completes a full first pass with no
+blockers. "Ready with fixes" (only non-blocking P2 notes remain) counts as
+passing — the loop does not churn on nitpicks.
 
-**The loop is capped.** Three review rounds without a clean fresh pass stops
-the loop and escalates to the human with all open findings. Findings already
-adjudicated invalid cannot re-block a later round without new evidence (the
-adjudication ratchet). "Bounded convergence" is a rule, not a hope.
+**The loop is capped.** Three rounds without a clean fresh pass stops the loop
+and escalates to you with all open findings. Findings already adjudicated
+invalid cannot re-block a later round without new evidence (the adjudication
+ratchet). Bounded convergence is a rule, not a hope.
 
-**Plans are right-sized decision artifacts.** `/cvg-plan` classifies complexity
-first (brief / standard / full) and only cross-cutting work gets the full
-surfaces + invariant-matrix treatment. Plans never contain code or function
-signatures. When open behavior decisions bind multiple slices or surfaces, they
-are recorded in a behavior contract rather than invented downstream.
+**Plans are right-sized decision artifacts.** `/cvg-plan` classifies
+complexity first (brief / standard / full); only cross-cutting work gets the
+full surfaces + invariant-matrix treatment. Plans never contain code. Open
+behavior decisions that bind multiple slices go into a behavior contract
+rather than being invented downstream.
 
 **A human sits between planning and building.** The plan loop produces a plan;
-the build loop starts only when the user explicitly triggers it.
+the build loop starts only when you explicitly trigger it.
 
 ## Two Ways to Use It
 
-**Standalone skills** (any supported host): drive each step yourself.
+**Standalone skills** (any supported host): drive each step yourself. With no
+orchestrator, the skills route blocking questions to you directly.
 
 ```text
 /cvg-plan -> /cvg-plan-review -> (fix via /cvg-plan-review-feedback)
 -> /cvg-work -> /cvg-code-review -> (fix via /cvg-code-review-feedback)
 ```
-
-When there is no orchestrator, the skills route blocking questions to you
-directly.
 
 **Orchestrated loops** (Claude Code and Codex): the session becomes an
 orchestrator that spawns and supervises real specialist sessions.
@@ -125,8 +176,27 @@ agents (final-message callbacks, task-notification waiting). Each platform's
 build ships only its own transport mechanics — the copies under
 `plugins/codex` and `plugins/claude` are generated from one canonical source.
 Specialist identity always comes from the platform tool result, never from the
-specialist's own prose. Generic hosts get the six base skills only — they lack
-specialist-session primitives.
+specialist's own prose.
+
+## Cost and Fit
+
+**What a loop spends.** A build-loop run is one worker session, a fresh
+reviewer per round (each dispatching two or more sub-reviewer agents), focused
+re-reviews, and a final fresh pass — expect an order of magnitude more tokens
+than telling an agent to "just implement it". That is the price of
+independent review, and it is why the loop is capped at three rounds. The six
+base skills used standalone cost roughly what any single-session skill costs;
+`claude plugin details convergo` shows the per-skill token numbers.
+
+**What the loops require.** Orchestration needs real sub-session primitives:
+background agents on Claude Code, threads on Codex. If the host cannot provide
+them, the skills stop with a tool-layer blocker rather than role-playing the
+specialists inline. Generic hosts (Cursor, OpenCode, Pi, Gemini) get the six
+base skills only.
+
+**When to use something else.** Quick spikes, throwaway experiments, and rapid
+visual UI iteration do not need a bounded review loop. Use the base planning
+and review skills selectively, or skip Convergo entirely.
 
 ## Skills
 
@@ -145,10 +215,11 @@ specialist-session primitives.
 ## Auxiliary Agents
 
 `/cvg-plan` and `/cvg-code-review` fan out to a small reviewer/researcher set
-adapted from CE. Code-review agents return raw JSON against the shared findings
-schema (`cvg-code-review/references/findings-schema.md`). Plan-review personas
-are skill-local prompt assets under `cvg-plan-review/references/personas/` and
-need no platform agent registration.
+adapted from CE. Code-review agents return raw JSON against the shared
+findings schema (`cvg-code-review/references/findings-schema.md`). Plan-review
+personas are skill-local prompt assets under
+`cvg-plan-review/references/personas/` and need no platform agent
+registration.
 
 | Agent | Used by | When |
 | --- | --- | --- |
@@ -173,14 +244,6 @@ Convergo leaves a reviewable paper trail:
   `review.json` (verdict, merged findings, auxiliary coverage) plus one JSON
   per sub-reviewer
 
-## Does It Fit Your Case?
-
-Convergo is optimized for work where correctness, testability, and
-reviewability matter more than iteration speed: a TDD-oriented workflow for
-code changes with explicit acceptance criteria. It is deliberately heavier than
-a prototype workflow — for quick spikes, throwaway experiments, or rapid visual
-UI iteration, use the base planning and review skills selectively or skip it.
-
 ## Install
 
 ### Claude Code
@@ -190,52 +253,31 @@ UI iteration, use the base planning and review skills selectively or skip it.
 /plugin install convergo
 ```
 
-The Claude plugin ships all nine skills (base + orchestrated loops) and the
-auxiliary `cvg-*` agents. `claude plugin details convergo` shows the component
-inventory and the projected token cost per skill.
+Ships all nine skills and the auxiliary `cvg-*` agents.
+`claude plugin details convergo` shows the component inventory and the
+projected token cost per skill.
 
 ### Codex App
 
-Convergo is installed as a custom plugin marketplace:
-
-1. In the Codex app, open **Plugins** from the sidebar.
-2. Click **Add** or **Add plugin marketplace**.
-3. Enter:
-
-   | Field | Value |
-   | --- | --- |
-   | Source | `gomilesf/convergo` |
-   | Git ref | `main` |
-   | Sparse paths | leave blank |
-
-4. Click **Add marketplace**.
-5. Select **Convergo** and install **convergo**.
-6. From this repository checkout, install the auxiliary Codex agents:
+1. Open **Plugins** from the sidebar, click **Add plugin marketplace**.
+2. Source: `gomilesf/convergo`, Git ref: `main`, sparse paths blank.
+3. Add the marketplace, select **Convergo**, install **convergo**.
+4. Install the auxiliary agents from a checkout, then restart Codex:
 
    ```bash
-   bun run install:codex-agents
+   git clone https://github.com/gomilesf/convergo && cd convergo
+   bun install && bun run install:codex-agents
    ```
-
-7. Restart Codex.
 
 ### Codex CLI
 
-Register the marketplace, then install through the Codex `/plugins` TUI:
-
 ```bash
 codex plugin marketplace add gomilesf/convergo
-codex
+codex   # inside: /plugins -> Convergo -> install convergo
 ```
 
-Inside Codex, run `/plugins`, choose **Convergo**, install **convergo**, then restart Codex.
-
-Install the auxiliary Codex agents from this repository checkout before restarting:
-
-```bash
-bun run install:codex-agents
-```
-
-For a non-default Codex profile, run each step against the same `CODEX_HOME`:
+Install the auxiliary agents from a checkout (as above), then restart Codex.
+For a non-default profile, run every step against the same `CODEX_HOME`:
 
 ```bash
 CODEX_HOME="$HOME/.codex/profiles/work" codex plugin marketplace add gomilesf/convergo
@@ -245,23 +287,20 @@ CODEX_HOME="$HOME/.codex/profiles/work" bun run install:codex-agents
 
 ### Cursor
 
-In Cursor Agent chat, install from the plugin marketplace:
-
 ```text
 /add-plugin convergo
 ```
 
 ### OpenCode
 
-Add the plugin to your global or project `opencode.json`:
+Add to your global or project `opencode.json`, then restart OpenCode. The
+OpenCode plugin registers the base-only skills under `plugins/generic/skills`.
 
 ```json
 {
   "plugin": ["convergo@git+https://github.com/gomilesf/convergo.git"]
 }
 ```
-
-Restart OpenCode after changing the config. The OpenCode plugin registers the base-only generated skills under `plugins/generic/skills`.
 
 ### Pi
 
@@ -277,8 +316,8 @@ gemini extensions install https://github.com/gomilesf/convergo
 
 ### Upgrading
 
-Installs resolve by version, so upgrades require a version bump on the
-marketplace side and an explicit update on yours:
+Installs resolve by version: upgrades need a version bump on the marketplace
+side and an explicit update on yours.
 
 ```text
 /plugin marketplace update convergo-plugin    (Claude Code)
@@ -348,10 +387,8 @@ Codex CLI:
 
 ```bash
 codex plugin marketplace add "$PWD"
-codex
+codex   # /plugins -> Convergo -> install convergo
 ```
-
-Then run `/plugins`, choose **Convergo**, and install **convergo**.
 
 OpenCode:
 
@@ -375,8 +412,8 @@ gemini extensions install "$PWD"
 
 ## License and Attribution
 
-Convergo is MIT licensed. Portions of the skill and agent prompt
-content are adapted from the MIT-licensed
+Convergo is MIT licensed. Portions of the skill and agent prompt content are
+adapted from the MIT-licensed
 [Compound Engineering](https://github.com/EveryInc/compound-engineering-plugin)
 plugin. See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
