@@ -91,8 +91,8 @@ different spiral.
 Then a second edit pass (reference: the generated gate image) added the inner repair
 cycle:
 
-> ADD ONE element: a solid BLACK ink return arrow from the top of the REVIEWER loop
-> back to the top of the WORKER loop, a gentle arc mirroring the black forward arrow
+> ADD ONE element: a solid BLACK ink STRAIGHT HORIZONTAL return line along the top tangent of the two loops, from the top of the REVIEWER loop
+> leftward to the top of the WORKER loop, exactly mirroring the straight forward arrow
 > at the bottom, arrowhead pointing left into the WORKER loop, labeled in LARGE
 > hand-set capitals 'FINDINGS' just above it, staying BELOW the red dashed BLOCKER
 > arc. No other changes.
