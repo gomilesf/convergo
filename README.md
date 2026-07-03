@@ -7,7 +7,7 @@
 
 ![Diverging vs converging review loops](docs/assets/convergo-hero.png)
 
-<!-- hero source: docs/assets/convergo-hero.svg (baoyu-diagram design system); placeholder until Iris's final art lands — replace the files, keep the paths -->
+<!-- hero: AI-generated (opencli chatgpt image, logo.png as style reference); placeholder until Iris's final art lands — replace the file, keep the path -->
 
 **Convergo** is a convergence-focused fork of
 [Compound Engineering](https://github.com/EveryInc/compound-engineering-plugin)
