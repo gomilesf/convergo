@@ -1,0 +1,75 @@
+{
+  "suite": "trigger-routing",
+  "cases": [
+    {
+      "id": "plan-direct",
+      "prompt": "Create a plan for issue #42: add rate limiting to the public API. Read the issue scope and the codebase first.",
+      "expect": "cvg-plan"
+    },
+    {
+      "id": "work-direct",
+      "prompt": "Implement docs/plans/rate-limit.md slice by slice with TDD and commit per slice.",
+      "expect": "cvg-work"
+    },
+    {
+      "id": "code-review-direct",
+      "prompt": "Review the implementation on this branch against docs/plans/rate-limit.md and the behavior contract. Distinguish code bugs from contract gaps.",
+      "expect": "cvg-code-review"
+    },
+    {
+      "id": "plan-review-direct",
+      "prompt": "Before we start building, review docs/plans/rate-limit.md against the actual codebase: are the slices sufficient and the invariants correct?",
+      "expect": "cvg-plan-review"
+    },
+    {
+      "id": "plan-review-feedback",
+      "prompt": "The plan reviewer returned blocker findings on your plan. Validate the feedback and revise the plan-owned artifacts in this planner session.",
+      "expect": "cvg-plan-review-feedback"
+    },
+    {
+      "id": "code-review-feedback",
+      "prompt": "The code reviewer returned two blocker findings. Validate them and repair the implementation-owned issues; stop if any is a contract gap.",
+      "expect": "cvg-code-review-feedback"
+    },
+    {
+      "id": "build-loop",
+      "prompt": "Run a supervised implementation loop over docs/plans/rate-limit.md: a background worker implements, fresh code reviewers gate the exit.",
+      "expect": "cvg-build-loop"
+    },
+    {
+      "id": "plan-loop",
+      "prompt": "Iterate a plan for this feature through supervised specialist sessions until a fresh plan reviewer passes it.",
+      "expect": "cvg-plan-loop"
+    },
+    {
+      "id": "plan-loop-chinese",
+      "prompt": "用受监督的专家会话帮我把这个规划迭代到评审通过为止。",
+      "expect": "cvg-plan-loop"
+    },
+    {
+      "id": "multi-session",
+      "prompt": "Act as an orchestrator: coordinate planner, worker, and reviewer sessions as background agents for this feature.",
+      "expect": "cvg-multi-session"
+    },
+    {
+      "id": "negative-translate",
+      "prompt": "Translate README.md to Chinese.",
+      "expect": null
+    },
+    {
+      "id": "negative-debug",
+      "prompt": "Why is this test flaky? It fails about once in ten runs.",
+      "expect": null
+    },
+    {
+      "id": "negative-format",
+      "prompt": "Format all files in src/ with prettier.",
+      "expect": null
+    },
+    {
+      "id": "negative-git-summary",
+      "prompt": "Summarize what changed in the last five commits.",
+      "expect": null
+    }
+  ]
+}

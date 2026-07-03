@@ -257,7 +257,14 @@ bun run sync       # regenerate plugins/*/skills from skills-src/
 bun run validate   # productization metadata checks
 bun test           # metadata + skill convention tests
 bun run plugin:validate
+bun run eval:trigger   # LLM eval: skill descriptions route the right prompts
 ```
+
+`eval:trigger` replays the routing prompts in `evals/trigger/cases.json`
+against the current `skills-src/` descriptions through `claude -p` (default
+model: haiku; costs a few LLM calls, so it is not part of `bun test`). Run it
+after changing any skill `description`; add `-- --runs 3` to check routing
+stability.
 
 Static tests guard the contracts that keep the loop sound: the multi-session
 protocol gates stay byte-identical across each platform's vendored copies

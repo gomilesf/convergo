@@ -28,6 +28,7 @@
   "scripts": {
     "sync": "bun run scripts/sync-platform-skills.ts",
     "validate": "bun run scripts/validate.ts",
+    "eval:trigger": "bun run scripts/run-trigger-evals.ts",
     "install:codex-agents": "bun run scripts/install-codex-agents.ts",
     "plugin:validate": "claude plugin validate .claude-plugin/marketplace.json && claude plugin validate plugins/claude",
     "test": "bun test"
