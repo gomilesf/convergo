@@ -87,3 +87,12 @@ different spiral.
 > back above the loops toward the start, labeled in LARGE capitals 'BLOCKER'. Exactly
 > these five labels, all set large; arrowheads on the path showing direction; no other
 > text.
+
+Then a second edit pass (reference: the generated gate image) added the inner repair
+cycle:
+
+> ADD ONE element: a solid BLACK ink return arrow from the top of the REVIEWER loop
+> back to the top of the WORKER loop, a gentle arc mirroring the black forward arrow
+> at the bottom, arrowhead pointing left into the WORKER loop, labeled in LARGE
+> hand-set capitals 'FINDINGS' just above it, staying BELOW the red dashed BLOCKER
+> arc. No other changes.
