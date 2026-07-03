@@ -1,14 +1,37 @@
 # Convergo
 
-> Coding-agent **plan → review → build** loops that actually terminate.
+<img src="plugins/codex/assets/logo.png" alt="Convergo logo" width="88" align="right"/>
+
+> Disciplined software engineering for coding agents:
+> **plan → review → build** loops that actually terminate.
 
 <!-- hero image: diverging-vs-converging loop diagram (docs/assets/convergo-hero.png) — pending from Iris -->
 
 **Convergo** is an opinionated, convergence-focused fork of
 [Compound Engineering](https://github.com/EveryInc/compound-engineering-plugin)
-(CE) for coding-agent workflows where review loops need to terminate cleanly.
+(CE): sliced plans with done-when criteria, TDD implementation, and review
+loops that exit only when an independent fresh reviewer reports no blockers.
 **Who it's for:** engineers doing correctness-critical, reviewable work with AI
 coding agents — not quick spikes or throwaway prototypes.
+
+## Quick Start
+
+Claude Code:
+
+```text
+/plugin marketplace add gomilesf/convergo
+/plugin install convergo
+```
+
+Codex CLI:
+
+```bash
+codex plugin marketplace add gomilesf/convergo
+codex   # then /plugins -> Convergo -> install convergo, restart
+bun run install:codex-agents   # auxiliary agents, from a checkout of this repo
+```
+
+Every supported host and option: [Install](#install).
 
 ## The Problem
 
@@ -39,8 +62,8 @@ arrive, the same planner or worker that produced the artifact first classifies
 each finding — local code bug, pattern bug, verification gap, plan gap,
 contract gap, systemic design gap, stale, or blocked on a missing decision —
 and only then repairs what its role owns. Workers stop and call back on plan,
-contract, and systemic gaps instead of patching forward. This "step back"
-intake is the core difference from a naive review loop.
+contract, and systemic gaps instead of patching forward. This intake step is
+the core difference from a naive review loop.
 
 **Findings carry evidence, not vibes.** Code-review sub-reviewers return
 findings against a shared schema (`P0`–`P3` severity, discrete confidence
@@ -95,13 +118,15 @@ discuss goal
 -> done
 ```
 
-The loop skills share one protocol (`cvg-multi-session`) with a per-platform
-transport binding: Codex threads (`create_thread` / `send_message_to_thread` /
-`read_thread`, heartbeat waiting) on Codex; background agents (`Agent` +
-`SendMessage`, resumed from persisted transcripts, task-notification waiting)
-on Claude Code. Specialist identity always comes from the platform tool result,
-never from the specialist's own prose. Generic hosts get the six base skills
-only — they lack specialist-session primitives.
+The loop skills share one protocol (`cvg-multi-session`), bound to the host
+platform before anything else runs: specialists are Codex threads (callbacks
+via `send_message_to_thread`, heartbeat waiting) or Claude Code background
+agents (final-message callbacks, task-notification waiting). Each platform's
+build ships only its own transport mechanics — the copies under
+`plugins/codex` and `plugins/claude` are generated from one canonical source.
+Specialist identity always comes from the platform tool result, never from the
+specialist's own prose. Generic hosts get the six base skills only — they lack
+specialist-session primitives.
 
 ## Skills
 
@@ -166,7 +191,8 @@ UI iteration, use the base planning and review skills selectively or skip it.
 ```
 
 The Claude plugin ships all nine skills (base + orchestrated loops) and the
-auxiliary `cvg-*` agents.
+auxiliary `cvg-*` agents. `claude plugin details convergo` shows the component
+inventory and the projected token cost per skill.
 
 ### Codex App
 
@@ -249,35 +275,63 @@ pi install git:github.com/gomilesf/convergo
 gemini extensions install https://github.com/gomilesf/convergo
 ```
 
+### Upgrading
+
+Installs resolve by version, so upgrades require a version bump on the
+marketplace side and an explicit update on yours:
+
+```text
+/plugin marketplace update convergo-plugin    (Claude Code)
+/plugin update convergo
+```
+
+```bash
+codex plugin marketplace upgrade convergo-plugin   # Codex CLI
+codex plugin add convergo@convergo-plugin
+```
+
 ## Local Development
 
 ```bash
 bun install
-bun run sync       # regenerate plugins/*/skills from skills-src/
-bun run validate   # productization metadata checks
-bun test           # metadata + skill convention tests
+bun run sync           # regenerate plugins/*/skills from skills-src/
+bun run validate       # productization metadata checks
+bun test               # metadata + skill convention tests
 bun run plugin:validate
 bun run eval:trigger   # LLM eval: skill descriptions route the right prompts
 ```
 
+### Source layout and generated builds
+
+`skills-src/` is the single source of skill content. `bun run sync` generates
+the platform roots: it strips `<!-- codex -->` / `<!-- claude -->` marker
+blocks so each platform build carries only its own transport mechanics, and it
+renders the loop skills' `references/cvg-multi-session-protocol.md` copies
+from the canonical `skills-src/cvg-multi-session/SKILL.md`. Never edit
+generated files by hand; `bun test` byte-checks every platform copy against
+the transformed source.
+
+The other static tests guard the contracts that keep the loop sound: the
+findings schema ships with every `cvg-code-review` copy, the stage-calibration
+block stays identical across skills, and agent prompts contain no dangling
+references.
+
+### Trigger-routing evals
+
 `eval:trigger` replays the routing prompts in `evals/trigger/cases.json`
 against the current `skills-src/` descriptions through `claude -p`, with
 frozen descriptions of real competing skills (compound-engineering, built-in
-review commands) in the candidate list so convergo must win against a
+review commands) in the candidate list, so convergo must win against a
 realistic install. Cases cover per-skill positives, paraphrases that avoid
 convergo vocabulary, boundary prompts with accept-either answers, calibration
-prompts a distractor must win, and no-skill negatives. Default judge model is
-haiku; it costs a few LLM calls, so it is not part of `bun test`. Run it after
-changing any skill `description`; add `-- --runs 3` to check stability and
-`EVAL_MODEL=sonnet` to cross-check with a stronger judge.
+prompts a distractor must win, and no-skill negatives. Run it after changing
+any skill `description`; add `-- --runs 3` to check stability and
+`EVAL_MODEL=sonnet` to cross-check with a stronger judge. It costs a few LLM
+calls, so it is not part of `bun test`.
 
-Static tests guard the contracts that keep the loop sound: the multi-session
-protocol gates stay byte-identical across each platform's vendored copies
-(all generated by `bun run sync` from the canonical
-`skills-src/cvg-multi-session/SKILL.md`), the findings
-schema ships with every `cvg-code-review` copy, the stage-calibration block
-stays in sync across skills, and agent prompts contain no dangling references.
-Before releases that touch the loop skills, run the manual end-to-end gate:
+### End-to-end smoke test
+
+Before releases that touch the loop skills, run the manual gate:
 [docs/loop-smoke-test.md](docs/loop-smoke-test.md), a seeded-bug micro
 build-loop that exercises spawn, fresh review, feedback-to-same-worker,
 focused re-review, and the final fresh exit on the Claude Code transport.
@@ -329,18 +383,19 @@ plugin. See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 ## Repository Layout
 
 ```text
-skills-src/        Canonical skill sources
+skills-src/        Canonical skill sources (with platform marker blocks)
 agents-src/        Canonical auxiliary agent sources
-plugins/codex/     Codex plugin root: all nine skills + Codex agents
-plugins/claude/    Claude Code plugin root: all nine skills + Claude agents
+plugins/codex/     Codex plugin root: nine Codex-stripped skills + Codex agents
+plugins/claude/    Claude Code plugin root: nine Claude-stripped skills + Claude agents
 plugins/generic/   Base-only skill root for generic hosts
+evals/             Trigger-routing eval cases (run with bun run eval:trigger)
 .claude-plugin/    Claude Code marketplace metadata
 .agents/plugins/   Codex custom marketplace descriptor
 .cursor-plugin/    Cursor marketplace metadata
 .opencode/         OpenCode package entrypoint
 .pi/               Pi extension entrypoint
-src/               Productization validation library
-scripts/           Sync and validation text interfaces
+src/               Productization validation library + platform-content transforms
+scripts/           Sync, validation, and eval text interfaces
 tests/             Metadata and skill convention tests
 docs/              Productization notes and the loop smoke-test runbook
 ```
