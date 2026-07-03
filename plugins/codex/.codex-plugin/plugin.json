@@ -1,6 +1,6 @@
 {
   "name": "convergo",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "Fresh-reviewer convergence workflow skills for planning, implementation, and review loops.",
   "author": {
     "name": "gomilesf",
@@ -20,7 +20,7 @@
   "interface": {
     "displayName": "Convergo",
     "shortDescription": "Fresh-reviewer workflow skills for planning, implementation, and review loops.",
-    "longDescription": "Convergo packages the fresh-reviewer convergence protocol as native agent skills. Use cvg-plan and cvg-plan-review to stabilize a plan, cvg-work and cvg-code-review to stabilize an implementation, and Codex-only loop skills to coordinate real specialist threads with callback transport, heartbeat waiting, step-back classification, and a final fresh-reviewer exit gate.",
+    "longDescription": "Convergo packages a bounded convergence workflow as native agent skills. The base skills stabilize each artifact: cvg-plan drafts a sliced plan with done-when criteria, cvg-plan-review checks it against the real codebase, cvg-work implements it slice by slice with TDD, and cvg-code-review verifies the result against the plan, separating code bugs from contract gaps. The loop skills — cvg-plan-loop, cvg-build-loop, and cvg-multi-session — orchestrate real specialist sessions as separate Codex threads with callback transport and heartbeat waiting. Reviewer feedback returns to the same session that produced the work, rounds are capped so reviews converge instead of ping-ponging, and nothing exits a loop until a fresh reviewer with no prior context reports no blockers.",
     "developerName": "gomilesf",
     "category": "Coding",
     "capabilities": [
