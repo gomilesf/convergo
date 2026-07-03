@@ -1,6 +1,6 @@
 {
   "name": "convergo",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "description": "Fresh-reviewer convergence workflow skills for planning, implementation, and review loops.",
   "author": {
     "name": "gomilesf",
@@ -34,6 +34,9 @@
       "/cvg-build-loop docs/plans/example-plan.md",
       "/cvg-code-review review my implementation against the plan"
     ],
+    "brandColor": "#312E81",
+    "logo": "./assets/logo.png",
+    "composerIcon": "./assets/logo.png",
     "screenshots": []
   }
 }

@@ -1,6 +1,6 @@
 {
   "name": "convergo",
   "description": "Fresh-reviewer convergence workflow skills for planning, implementation, and review loops.",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "contextFileName": "GEMINI.md"
 }
