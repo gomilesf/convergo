@@ -1,6 +1,6 @@
 ---
 name: cvg-code-review-feedback
-description: "Handle cvg-code-review blocker findings in the worker session. Validate feedback, repair implementation-owned issues, or stop for plan and contract gaps."
+description: "Handle code-review blocker findings returned to the worker session. Validate feedback, repair implementation-owned issues, or stop for plan and contract gaps."
 ---
 
 # Code Review Feedback

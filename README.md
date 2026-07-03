@@ -261,10 +261,15 @@ bun run eval:trigger   # LLM eval: skill descriptions route the right prompts
 ```
 
 `eval:trigger` replays the routing prompts in `evals/trigger/cases.json`
-against the current `skills-src/` descriptions through `claude -p` (default
-model: haiku; costs a few LLM calls, so it is not part of `bun test`). Run it
-after changing any skill `description`; add `-- --runs 3` to check routing
-stability.
+against the current `skills-src/` descriptions through `claude -p`, with
+frozen descriptions of real competing skills (compound-engineering, built-in
+review commands) in the candidate list so convergo must win against a
+realistic install. Cases cover per-skill positives, paraphrases that avoid
+convergo vocabulary, boundary prompts with accept-either answers, calibration
+prompts a distractor must win, and no-skill negatives. Default judge model is
+haiku; it costs a few LLM calls, so it is not part of `bun test`. Run it after
+changing any skill `description`; add `-- --runs 3` to check stability and
+`EVAL_MODEL=sonnet` to cross-check with a stronger judge.
 
 Static tests guard the contracts that keep the loop sound: the multi-session
 protocol gates stay byte-identical across each platform's vendored copies

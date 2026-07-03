@@ -1,6 +1,6 @@
 ---
 name: cvg-plan-review-feedback
-description: "Handle cvg-plan-review blocker findings in the planner session. Validate feedback, revise plan-owned artifacts, or stop for missing decisions."
+description: "Handle plan-review blocker findings returned to the planner session. Validate feedback, revise plan-owned artifacts, or stop for missing decisions."
 ---
 
 # Plan Review Feedback

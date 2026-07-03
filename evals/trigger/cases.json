@@ -1,73 +1,220 @@
 {
   "suite": "trigger-routing",
+  "notes": "expect accepts a single name, an array (any listed answer passes), or null (= none). Distractors are frozen copies of real competing skill descriptions a typical user has installed; they compete in every case. Calibration cases assert the distractor wins, guarding against convergo over-triggering.",
+  "distractors": [
+    {
+      "name": "ce-plan",
+      "description": "Create structured plans for multi-step work, including software and non-software tasks. Use when asked to plan, break down implementation, plan from requirements, or deepen an existing plan."
+    },
+    {
+      "name": "ce-work",
+      "description": "Execute a plan or concrete work prompt end-to-end. Use when implementing from docs/plans, a spec path, or a clear build request."
+    },
+    {
+      "name": "ce-code-review",
+      "description": "Structured code review for bugs, regressions, tests, and standards. Use before PRs or when asked for review."
+    },
+    {
+      "name": "ce-debug",
+      "description": "Diagnosis loop for bugs and failing behavior. Use for errors, stack traces, regressions, failed tests, or stuck investigations after failed fixes."
+    },
+    {
+      "name": "ce-brainstorm",
+      "description": "Explore vague or ambitious ideas into a right-sized requirements-only unified plan. Use when the user wants to brainstorm, think through scope, or decide what to build."
+    },
+    {
+      "name": "ce-commit",
+      "description": "Create a git commit with a clear, value-communicating message. Use when the user asks to commit or save staged or unstaged changes."
+    },
+    {
+      "name": "review",
+      "description": "Review a GitHub pull request; for your working diff use /code-review."
+    },
+    {
+      "name": "code-review",
+      "description": "Review the current diff for correctness bugs and reuse/simplification/efficiency cleanups at the given effort level."
+    },
+    {
+      "name": "verify",
+      "description": "Verify that a code change actually does what it's supposed to by exercising it end-to-end and observing behavior. Run before committing nontrivial changes."
+    },
+    {
+      "name": "spec",
+      "description": "Turn vague intent into a precise, executable spec in five phases."
+    }
+  ],
   "cases": [
     {
       "id": "plan-direct",
-      "prompt": "Create a plan for issue #42: add rate limiting to the public API. Read the issue scope and the codebase first.",
-      "expect": "cvg-plan"
+      "tags": ["positive"],
+      "prompt": "Create a plan for issue #42: add rate limiting to the public API. Read the issue scope and the codebase first, and give every step a done-when criterion.",
+      "expect": ["cvg-plan", "ce-plan"]
     },
     {
       "id": "work-direct",
+      "tags": ["positive"],
       "prompt": "Implement docs/plans/rate-limit.md slice by slice with TDD and commit per slice.",
-      "expect": "cvg-work"
+      "expect": ["cvg-work", "ce-work"]
     },
     {
       "id": "code-review-direct",
+      "tags": ["positive"],
       "prompt": "Review the implementation on this branch against docs/plans/rate-limit.md and the behavior contract. Distinguish code bugs from contract gaps.",
       "expect": "cvg-code-review"
     },
     {
       "id": "plan-review-direct",
+      "tags": ["positive"],
       "prompt": "Before we start building, review docs/plans/rate-limit.md against the actual codebase: are the slices sufficient and the invariants correct?",
       "expect": "cvg-plan-review"
     },
     {
       "id": "plan-review-feedback",
+      "tags": ["positive"],
       "prompt": "The plan reviewer returned blocker findings on your plan. Validate the feedback and revise the plan-owned artifacts in this planner session.",
       "expect": "cvg-plan-review-feedback"
     },
     {
       "id": "code-review-feedback",
+      "tags": ["positive"],
       "prompt": "The code reviewer returned two blocker findings. Validate them and repair the implementation-owned issues; stop if any is a contract gap.",
       "expect": "cvg-code-review-feedback"
     },
     {
       "id": "build-loop",
+      "tags": ["positive"],
       "prompt": "Run a supervised implementation loop over docs/plans/rate-limit.md: a background worker implements, fresh code reviewers gate the exit.",
       "expect": "cvg-build-loop"
     },
     {
       "id": "plan-loop",
+      "tags": ["positive"],
       "prompt": "Iterate a plan for this feature through supervised specialist sessions until a fresh plan reviewer passes it.",
       "expect": "cvg-plan-loop"
     },
     {
       "id": "plan-loop-chinese",
+      "tags": ["positive"],
       "prompt": "用受监督的专家会话帮我把这个规划迭代到评审通过为止。",
       "expect": "cvg-plan-loop"
     },
     {
       "id": "multi-session",
+      "tags": ["positive"],
       "prompt": "Act as an orchestrator: coordinate planner, worker, and reviewer sessions as background agents for this feature.",
       "expect": "cvg-multi-session"
     },
     {
+      "id": "build-loop-paraphrase",
+      "tags": ["paraphrase"],
+      "prompt": "Hand this plan to a background worker and watch its progress. Do not call it done until a reviewer who has never seen the code signs off with no objections.",
+      "expect": "cvg-build-loop"
+    },
+    {
+      "id": "build-loop-paraphrase-chinese",
+      "tags": ["paraphrase"],
+      "prompt": "把这个 plan 交给一个后台 worker 去实现，你负责盯进度。每轮做完找一个没看过这些代码的新 reviewer 把关，过了才算完成。",
+      "expect": "cvg-build-loop"
+    },
+    {
+      "id": "plan-loop-paraphrase",
+      "tags": ["paraphrase"],
+      "prompt": "Draft the plan in a separate session and keep sending it back for revision until an independent reviewer has no remaining objections.",
+      "expect": "cvg-plan-loop"
+    },
+    {
+      "id": "multi-session-paraphrase",
+      "tags": ["paraphrase"],
+      "prompt": "You supervise only: spawn separate sessions for the planning specialist and the implementer, relay results between them, and report back to me.",
+      "expect": "cvg-multi-session"
+    },
+    {
+      "id": "code-review-feedback-paraphrase",
+      "tags": ["paraphrase"],
+      "prompt": "A reviewer just sent back three blockers on my implementation. Triage them: fix what is genuinely ours, and flag anything that is really the plan's fault instead of patching around it.",
+      "expect": "cvg-code-review-feedback"
+    },
+    {
+      "id": "work-paraphrase",
+      "tags": ["paraphrase"],
+      "prompt": "There is an approved plan at docs/plans/auth.md. Build it: write the failing test first each time, keep commits small, and do not stop until every done-when box is checked.",
+      "expect": ["cvg-work", "ce-work"]
+    },
+    {
+      "id": "plan-review-paraphrase",
+      "tags": ["paraphrase"],
+      "prompt": "Someone wrote docs/plans/billing.md. Before any code is written, check it against the repo with fresh eyes: missing surfaces, wrong boundaries, steps that cannot actually be implemented as written.",
+      "expect": "cvg-plan-review"
+    },
+    {
+      "id": "boundary-plan-and-review",
+      "tags": ["boundary"],
+      "prompt": "Get a plan written for this feature and have it independently reviewed before we build.",
+      "expect": ["cvg-plan-loop", "cvg-plan", "ce-plan"]
+    },
+    {
+      "id": "boundary-generic-pr-review",
+      "tags": ["boundary"],
+      "prompt": "Review my pull request #123.",
+      "expect": ["review", "code-review", "ce-code-review"]
+    },
+    {
+      "id": "boundary-working-diff-review",
+      "tags": ["boundary"],
+      "prompt": "Look over my current uncommitted diff for bugs before I commit.",
+      "expect": ["code-review", "ce-code-review"]
+    },
+    {
+      "id": "boundary-nonsoftware-plan",
+      "tags": ["boundary"],
+      "prompt": "Plan a marketing launch timeline for next quarter.",
+      "expect": ["ce-plan", "none"]
+    },
+    {
+      "id": "boundary-failing-tests",
+      "tags": ["boundary"],
+      "prompt": "The tests are failing after my change. Figure out why and fix it.",
+      "expect": ["ce-debug", "none"]
+    },
+    {
+      "id": "calibration-brainstorm",
+      "tags": ["calibration"],
+      "prompt": "Brainstorm what we should build to improve user onboarding; I have a vague idea and need to narrow the scope.",
+      "expect": "ce-brainstorm"
+    },
+    {
+      "id": "calibration-commit",
+      "tags": ["calibration"],
+      "prompt": "Commit these staged changes with a good message.",
+      "expect": "ce-commit"
+    },
+    {
+      "id": "calibration-spec",
+      "tags": ["calibration"],
+      "prompt": "Turn this vague feature idea into a precise, executable spec.",
+      "expect": "spec"
+    },
+    {
+      "id": "calibration-verify",
+      "tags": ["calibration"],
+      "prompt": "Before I commit, actually run the app and confirm my change behaves correctly end to end.",
+      "expect": "verify"
+    },
+    {
       "id": "negative-translate",
+      "tags": ["negative"],
       "prompt": "Translate README.md to Chinese.",
       "expect": null
     },
     {
-      "id": "negative-debug",
-      "prompt": "Why is this test flaky? It fails about once in ten runs.",
-      "expect": null
-    },
-    {
       "id": "negative-format",
+      "tags": ["negative"],
       "prompt": "Format all files in src/ with prettier.",
-      "expect": null
+      "expect": ["none", "ce-work"]
     },
     {
       "id": "negative-git-summary",
+      "tags": ["negative"],
       "prompt": "Summarize what changed in the last five commits.",
       "expect": null
     }
