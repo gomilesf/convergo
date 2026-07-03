@@ -5,7 +5,9 @@
 > Disciplined software engineering for coding agents:
 > **plan → review → build** loops that actually terminate.
 
-<!-- hero image: diverging-vs-converging loop diagram (docs/assets/convergo-hero.png) — pending from Iris -->
+![Diverging vs converging review loops](docs/assets/convergo-hero.png)
+
+<!-- hero source: docs/assets/convergo-hero.svg (baoyu-diagram design system); placeholder until Iris's final art lands — replace the files, keep the paths -->
 
 **Convergo** is a convergence-focused fork of
 [Compound Engineering](https://github.com/EveryInc/compound-engineering-plugin)

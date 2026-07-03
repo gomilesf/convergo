@@ -1,0 +1,98 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 720" font-family="'JetBrains Mono','SF Mono','Cascadia Code',monospace">
+  <defs>
+    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#1e293b" stroke-width="0.5"/>
+    </pattern>
+    <marker id="arrow-rose" markerUnits="userSpaceOnUse" markerWidth="26" markerHeight="20" refX="19" refY="10" orient="auto">
+      <polygon points="0 0, 26 10, 0 20" fill="#fb7185"/>
+    </marker>
+    <marker id="arrow-cyan" markerUnits="userSpaceOnUse" markerWidth="26" markerHeight="20" refX="19" refY="10" orient="auto">
+      <polygon points="0 0, 26 10, 0 20" fill="#22d3ee"/>
+    </marker>
+  </defs>
+
+  <rect width="1600" height="720" fill="#0f172a"/>
+  <rect width="1600" height="720" fill="url(#grid)"/>
+
+  <text x="800" y="52" text-anchor="middle" font-size="18" font-weight="700" fill="#e2e8f0">agent review loops: diverging vs converging</text>
+
+  <!-- divider -->
+  <line x1="800" y1="90" x2="800" y2="620" stroke="#1e293b" stroke-width="1.5" stroke-dasharray="6 6"/>
+
+  <!-- ============ LEFT: diverging ============ -->
+  <text x="410" y="112" text-anchor="middle" font-size="14" font-weight="600" fill="#fb7185">unbounded review loop</text>
+
+  <!-- outward spiral, center (410,380) -->
+  <path d="M 390 380
+           A 20 20 0 0 1 430 380
+           A 30 30 0 0 1 370 380
+           A 45 45 0 0 1 460 380
+           A 62 62 0 0 1 336 380
+           A 85 85 0 0 1 506 380
+           A 112 112 0 0 1 282 380"
+        fill="none" stroke="#fb7185" stroke-width="9" stroke-linecap="round"
+        marker-end="url(#arrow-rose)" opacity="0.9"/>
+
+  <text x="410" y="380" text-anchor="middle" font-size="9" fill="#94a3b8" opacity="0"></text>
+  <text x="410" y="242" text-anchor="middle" font-size="10" fill="#94a3b8">round 1 starts at the center</text>
+  <text x="410" y="548" text-anchor="middle" font-size="10" fill="#fb7185">round n: still diverging …</text>
+
+  <!-- failure notes -->
+  <g font-size="11" fill="#94a3b8">
+    <text x="150" y="612">x  one symptom at a time, never the missing invariant</text>
+    <text x="150" y="636">x  worker patches around plan and contract gaps</text>
+    <text x="150" y="660">x  no exit condition — same reviewer, one more pass</text>
+  </g>
+
+  <!-- ============ RIGHT: converging ============ -->
+  <text x="1120" y="112" text-anchor="middle" font-size="14" font-weight="600" fill="#22d3ee">convergo loop</text>
+
+  <!-- round cap badge -->
+  <rect x="1424" y="94" width="122" height="26" rx="13" fill="rgba(120,53,15,0.3)" stroke="#fbbf24" stroke-width="1"/>
+  <text x="1485" y="111" text-anchor="middle" font-size="10" font-weight="600" fill="#fbbf24">round cap: 3</text>
+
+  <!-- inward spiral, center (1120,380) -->
+  <path d="M 990 380
+           A 130 130 0 0 1 1250 380
+           A 95 95 0 0 1 1060 380
+           A 65 65 0 0 1 1190 380
+           A 40 40 0 0 1 1110 380"
+        fill="none" stroke="#22d3ee" stroke-width="9" stroke-linecap="round"
+        marker-end="url(#arrow-cyan)" opacity="0.9"/>
+
+  <!-- convergence point with check -->
+  <circle cx="1132" cy="380" r="17" fill="#34d399"/>
+  <text x="1132" y="386" text-anchor="middle" font-size="15" font-weight="700" fill="#0f172a">&#10003;</text>
+
+  <!-- milestone dots on the arcs, numbered -->
+  <circle cx="1120" cy="250" r="6" fill="#e2e8f0"/>
+  <text x="1120" y="236" text-anchor="middle" font-size="11" font-weight="600" fill="#e2e8f0">1</text>
+
+  <circle cx="1155" cy="475" r="6" fill="#e2e8f0"/>
+  <text x="1155" y="497" text-anchor="middle" font-size="11" font-weight="600" fill="#e2e8f0">2</text>
+
+  <circle cx="1125" cy="315" r="6" fill="#e2e8f0"/>
+  <text x="1125" y="303" text-anchor="middle" font-size="11" font-weight="600" fill="#e2e8f0">3</text>
+
+  <circle cx="1150" cy="420" r="6" fill="#e2e8f0"/>
+  <text x="1150" y="441" text-anchor="middle" font-size="11" font-weight="600" fill="#e2e8f0">4</text>
+
+  <!-- legend -->
+  <g font-size="11">
+    <text x="1310" y="300" fill="#e2e8f0">1  fresh review — all findings in one pass</text>
+    <text x="1310" y="324" fill="#e2e8f0">2  intake — repair what the role owns</text>
+    <text x="1310" y="348" fill="#e2e8f0">3  focused re-review by the same reviewer</text>
+    <text x="1310" y="372" fill="#e2e8f0">4  NEW fresh reviewer, full first pass</text>
+    <text x="1310" y="396" fill="#34d399">&#10003;  no blockers — exit</text>
+  </g>
+
+  <!-- guarantees -->
+  <g font-size="11" fill="#94a3b8">
+    <text x="850" y="612">+  contract gaps stop the worker — one plan repair, not n patches</text>
+    <text x="850" y="636">+  exit judged by a reviewer with zero prior context</text>
+    <text x="850" y="660">+  3 rounds without a clean pass -&gt; escalate to the human</text>
+  </g>
+
+  <!-- caption -->
+  <text x="800" y="700" text-anchor="middle" font-size="12" fill="#64748b">one missing invariant across eight surfaces should become one plan repair — not eight rounds of local patches</text>
+</svg>
