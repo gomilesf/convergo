@@ -1,8 +1,8 @@
 {
   "name": "convergo",
   "displayName": "Convergo",
-  "version": "0.2.3",
-  "description": "Fresh-reviewer convergence workflow skills for planning, implementation, and review.",
+  "version": "0.2.4",
+  "description": "Disciplined software engineering for coding agents: sliced plans, TDD implementation, and plan-anchored code review.",
   "author": {
     "name": "gomilesf",
     "url": "https://github.com/gomilesf"

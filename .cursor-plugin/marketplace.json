@@ -6,13 +6,13 @@
   },
   "metadata": {
     "description": "Cursor plugin marketplace for Convergo base workflow skills",
-    "version": "0.2.3"
+    "version": "0.2.4"
   },
   "plugins": [
     {
       "name": "convergo",
       "source": "./plugins/generic",
-      "description": "Base fresh-reviewer workflow skills for planning, implementation, and review."
+      "description": "Disciplined software engineering for coding agents: sliced plans, TDD implementation, and plan-anchored code review."
     }
   ]
 }

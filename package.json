@@ -1,7 +1,7 @@
 {
   "name": "convergo",
-  "version": "0.2.3",
-  "description": "Fresh-reviewer convergence workflow skills for coding agents",
+  "version": "0.2.4",
+  "description": "Disciplined software engineering for coding agents: plan, build, and review in bounded loops until an independent fresh reviewer signs off",
   "type": "module",
   "private": true,
   "main": ".opencode/plugins/convergo.js",
