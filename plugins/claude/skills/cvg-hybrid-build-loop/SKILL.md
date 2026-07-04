@@ -96,6 +96,12 @@ background Claude agent:
   flag falls back to read-only and a worker repair round cannot write.
 - The wrapper must not read the repo, run other commands, review, summarize,
   or filter codex output. Relay fidelity is its whole job.
+- `workspace-write` covers the directory codex is launched from. If the task
+  legitimately needs writes outside that worktree (for example a second
+  repo), the orchestrator must name those extra paths in the specialist
+  prompt and the wrapper extends the sandbox for exactly those paths with
+  `-c 'sandbox_workspace_write.writable_roots=[...]'`. Never escalate to
+  `danger-full-access` to get past a write denial.
 
 ## Why the Exit Is Tiered
 
