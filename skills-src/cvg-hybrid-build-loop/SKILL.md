@@ -74,18 +74,34 @@ A codex-backed specialist satisfies the real-specialist gate (real,
 addressable, continuable) by wrapping a Codex CLI session in a thin
 background Claude agent:
 
-- Spawn a background agent on a cheap model (`model: "sonnet"`). Its prompt
-  instructs it to:
+- Spawn a background agent on a cheap model (`model: "sonnet"`), **without
+  worktree isolation** — codex must run in the worktree named in the
+  specialist prompt, and an isolated wrapper worktree can be reclaimed out
+  from under a still-running codex process. Its prompt instructs it to:
   1. compose one self-contained codex prompt from the specialist prompt it
      received — role skill to load, artifact paths, refs, boundaries, and the
      exact callback template; nothing else;
-  2. run it once via Bash with the sandbox this role requires
-     (`codex exec --sandbox workspace-write "<prompt>"` for the worker,
-     `codex exec --sandbox read-only "<prompt>"` for reviewers), capturing
-     the codex session id the CLI reports (use `--json` if the plain output
-     does not show it);
-  3. return the codex session's final message verbatim as its own final
-     message, appending one line: `Codex session: <session-id>`.
+  2. launch codex exactly once as a background Bash command
+     (`run_in_background: true` — codex runs routinely outlast the single
+     foreground Bash timeout) with the sandbox this role requires, the
+     final message written to a file, and the run header captured:
+     `codex exec --sandbox workspace-write -o <scratch>/last-message.txt
+     "<prompt>" > <scratch>/run-header.log 2>&1` for the worker,
+     `--sandbox read-only` for reviewers;
+  3. stay in-turn and wait with repeated bounded foreground wait commands,
+     rerun until the file lands:
+     `for i in $(seq 1 100); do [ -s <scratch>/last-message.txt ] && { echo
+     READY; exit 0; }; sleep 5; done; echo NOT-YET`.
+     The wrapper must NOT end its turn to wait for a wake-up: a stopped
+     background specialist is not re-invoked when its background command
+     exits, and the run becomes an orphan until someone nudges the wrapper.
+     Do not hand the run to any separate background task queue;
+  4. once READY, relay the `-o` file's content verbatim as its own final
+     message, appending one line: `Codex session: <session-id>` (grep
+     `session id:` from the run header log).
+
+If a wrapper does stop early anyway, it is recoverable: `SendMessage` it to
+relay now — the resumed wrapper reads the `-o` file and finishes.
 - The wrapper agent id from the `Agent` tool result is the specialist id.
   Record the codex session id beside it for continuation.
 - Continue the specialist with `SendMessage` to the same wrapper; the wrapper
