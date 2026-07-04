@@ -91,6 +91,15 @@ background Claude agent:
      message, appending one line: `Codex session: <session-id>` (grep
      `session id:` from the run header log).
 
+The `-o` file is the source of truth, not the exit code. Codex can exit
+nonzero after a completed run (shutdown or hook noise), so a "command
+failed" report with a non-empty `-o` file still means success — relay it.
+Never relaunch codex because of the exit code alone; treat the run as
+failed only when the process has exited and the `-o` file is still empty,
+and then relay the tail of the run header log as a failure callback
+instead of retrying. Append `</dev/null` to the codex command so it never
+waits on stdin.
+
 If a wrapper does stop early anyway, it is recoverable: `SendMessage` it to
 relay now — the resumed wrapper reads the `-o` file and finishes.
 - The wrapper agent id from the `Agent` tool result is the specialist id.
