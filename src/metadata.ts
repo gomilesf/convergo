@@ -1,5 +1,4 @@
 import { promises as fs } from "node:fs"
-import os from "node:os"
 import path from "node:path"
 
 export type ProductizationValidation = {
@@ -40,53 +39,17 @@ type MarketplaceManifest = {
 }
 
 const PLUGIN_NAME = "convergo"
-const CODEX_INSTALL_MANIFEST = "install-manifest.json"
 const EXPECTED_REPOSITORY = "https://github.com/gomilesf/convergo"
 export const BASE_SKILLS = ["cvg-code-review", "cvg-code-review-feedback", "cvg-plan", "cvg-plan-review", "cvg-plan-review-feedback", "cvg-work"].sort()
 export const LOOP_SKILLS = ["cvg-build-loop", "cvg-multi-session", "cvg-plan-loop"].sort()
 export const CODEX_SKILLS = [...BASE_SKILLS, ...LOOP_SKILLS].sort()
 export const CLAUDE_SKILLS = [...BASE_SKILLS, ...LOOP_SKILLS].sort()
-export const AUXILIARY_AGENT_NAMES = [
-  "cvg-adversarial-reviewer",
-  "cvg-best-practices-researcher",
-  "cvg-correctness-reviewer",
-  "cvg-reliability-reviewer",
-  "cvg-repo-research-analyst",
-  "cvg-security-reviewer",
-  "cvg-testing-reviewer",
-].sort()
 export const PLATFORM_SKILL_ROOTS = {
   source: "skills-src",
   codex: "plugins/codex/skills",
   claude: "plugins/claude/skills",
   generic: "plugins/generic/skills",
 } as const
-export const PLATFORM_AGENT_ROOTS = {
-  sourceClaude: "agents-src/claude",
-  sourceCodex: "agents-src/codex",
-  codex: "plugins/codex/.codex/agents/convergo",
-  claude: "plugins/claude/agents",
-} as const
-
-export type CodexAgentInstallOptions = {
-  repoRoot?: string
-  codexRoot?: string
-}
-
-export type CodexAgentInstallResult = {
-  codexRoot: string
-  agentsRoot: string
-  manifestPath: string
-  agents: string[]
-}
-
-type CodexInstallManifest = {
-  version: 1
-  pluginName: string
-  skills: string[]
-  prompts: string[]
-  agents: string[]
-}
 
 const REQUIRED_FILES = [
   "package.json",
@@ -96,11 +59,6 @@ const REQUIRED_FILES = [
   "plugins/claude/.claude-plugin/plugin.json",
   "plugins/codex/.codex-plugin/plugin.json",
   "plugins/generic/.cursor-plugin/plugin.json",
-  "scripts/install-codex-agents.ts",
-  "agents-src/claude",
-  "agents-src/codex",
-  "plugins/claude/agents",
-  "plugins/codex/.codex/agents/convergo",
   "gemini-extension.json",
   ".opencode/plugins/convergo.js",
   ".pi/extensions/convergo.ts",
@@ -120,97 +78,6 @@ async function pathExists(filePath: string): Promise<boolean> {
   } catch {
     return false
   }
-}
-
-export function resolveCodexRoot(codexRoot?: string): string {
-  return path.resolve(codexRoot || process.env.CODEX_HOME || path.join(os.homedir(), ".codex"))
-}
-
-export function expectedCodexAgentFiles(): string[] {
-  return AUXILIARY_AGENT_NAMES.map((agentName) => `${agentName}.toml`).sort()
-}
-
-export async function installCodexAgents(
-  options: CodexAgentInstallOptions = {},
-): Promise<CodexAgentInstallResult> {
-  const repoRoot = options.repoRoot ?? process.cwd()
-  const codexRoot = resolveCodexRoot(options.codexRoot)
-  const sourceRoot = path.join(repoRoot, PLATFORM_AGENT_ROOTS.codex)
-  const agentsRoot = path.join(codexRoot, "agents", PLUGIN_NAME)
-  const manifestPath = path.join(codexRoot, PLUGIN_NAME, CODEX_INSTALL_MANIFEST)
-  const agents = expectedCodexAgentFiles()
-
-  await fs.mkdir(agentsRoot, { recursive: true })
-  await cleanupRemovedCodexAgents(agentsRoot, manifestPath, agents)
-
-  for (const agentFile of agents) {
-    await fs.copyFile(path.join(sourceRoot, agentFile), path.join(agentsRoot, agentFile))
-  }
-
-  await fs.mkdir(path.dirname(manifestPath), { recursive: true })
-  await fs.writeFile(
-    manifestPath,
-    JSON.stringify({
-      version: 1,
-      pluginName: PLUGIN_NAME,
-      skills: CODEX_SKILLS,
-      prompts: [],
-      agents,
-    } satisfies CodexInstallManifest, null, 2) + "\n",
-  )
-
-  return { codexRoot, agentsRoot, manifestPath, agents }
-}
-
-async function cleanupRemovedCodexAgents(
-  agentsRoot: string,
-  manifestPath: string,
-  currentAgents: string[],
-): Promise<void> {
-  const manifest = await readCodexInstallManifest(manifestPath)
-  if (!manifest) return
-
-  const current = new Set(currentAgents)
-  for (const agentFile of manifest.agents) {
-    if (current.has(agentFile) || !isSafeCodexAgentEntry(agentFile)) continue
-    await fs.rm(path.join(agentsRoot, agentFile), { force: true })
-    await fs.rm(path.join(agentsRoot, path.basename(agentFile, ".toml")), { recursive: true, force: true })
-  }
-}
-
-async function readCodexInstallManifest(manifestPath: string): Promise<CodexInstallManifest | null> {
-  try {
-    const parsed = JSON.parse(await fs.readFile(manifestPath, "utf8")) as Partial<CodexInstallManifest>
-    if (
-      parsed.version === 1 &&
-      parsed.pluginName === PLUGIN_NAME &&
-      Array.isArray(parsed.skills) &&
-      Array.isArray(parsed.prompts) &&
-      Array.isArray(parsed.agents)
-    ) {
-      return {
-        version: 1,
-        pluginName: PLUGIN_NAME,
-        skills: parsed.skills.filter((entry): entry is string => typeof entry === "string"),
-        prompts: parsed.prompts.filter((entry): entry is string => typeof entry === "string"),
-        agents: parsed.agents.filter((entry): entry is string => typeof entry === "string"),
-      }
-    }
-  } catch (err) {
-    if ((err as NodeJS.ErrnoException).code !== "ENOENT") {
-      throw err
-    }
-  }
-  return null
-}
-
-function isSafeCodexAgentEntry(agentFile: string): boolean {
-  return (
-    agentFile.endsWith(".toml") &&
-    path.basename(agentFile) === agentFile &&
-    !path.isAbsolute(agentFile) &&
-    !agentFile.includes("..")
-  )
 }
 
 async function readJson<T>(
@@ -297,43 +164,6 @@ async function validateSkillSurface(
   }
 }
 
-export async function listAgentFiles(
-  root: string,
-  relativeRoot: string,
-  extension: ".agent.md" | ".toml",
-): Promise<string[]> {
-  const agentRoot = path.join(root, relativeRoot)
-  const entries = await fs.readdir(agentRoot, { withFileTypes: true })
-  const suffixLength = extension.length
-  const agentNames: string[] = []
-
-  for (const entry of entries) {
-    if (!entry.isFile() || !entry.name.endsWith(extension)) continue
-    agentNames.push(entry.name.slice(0, -suffixLength))
-  }
-
-  return agentNames.sort()
-}
-
-async function validateAgentSurface(
-  root: string,
-  errors: string[],
-  relativeRoot: string,
-  extension: ".agent.md" | ".toml",
-): Promise<void> {
-  let agents: string[]
-  try {
-    agents = await listAgentFiles(root, relativeRoot, extension)
-  } catch (err: unknown) {
-    errors.push(`${relativeRoot}: could not read agents: ${(err as Error).message}`)
-    return
-  }
-
-  if (!sameList(agents, AUXILIARY_AGENT_NAMES)) {
-    errors.push(`${relativeRoot}: expected ${AUXILIARY_AGENT_NAMES.join(", ")}, found ${agents.join(", ")}`)
-  }
-}
-
 function marketplaceSourcePath(plugin: MarketplaceManifest["plugins"][number] | undefined): string | undefined {
   const source = plugin?.source
   if (typeof source === "string") return source
@@ -366,9 +196,6 @@ export async function validateProductization(root = process.cwd()): Promise<Prod
 
   if (packageJson?.main !== ".opencode/plugins/convergo.js") {
     errors.push("package.json: main must point at the OpenCode plugin entrypoint")
-  }
-  if (packageJson?.scripts?.["install:codex-agents"] !== "bun run scripts/install-codex-agents.ts") {
-    errors.push("package.json: install:codex-agents must run scripts/install-codex-agents.ts")
   }
   if (JSON.stringify(packageJson?.pi?.extensions ?? []) !== JSON.stringify(["./.pi/extensions/convergo.ts"])) {
     errors.push("package.json: pi.extensions must expose the Pi extension")
@@ -415,10 +242,6 @@ export async function validateProductization(root = process.cwd()): Promise<Prod
   await validateSkillSurface(root, errors, PLATFORM_SKILL_ROOTS.codex, CODEX_SKILLS)
   await validateSkillSurface(root, errors, PLATFORM_SKILL_ROOTS.claude, CLAUDE_SKILLS)
   await validateSkillSurface(root, errors, PLATFORM_SKILL_ROOTS.generic, BASE_SKILLS)
-  await validateAgentSurface(root, errors, PLATFORM_AGENT_ROOTS.sourceClaude, ".agent.md")
-  await validateAgentSurface(root, errors, PLATFORM_AGENT_ROOTS.sourceCodex, ".toml")
-  await validateAgentSurface(root, errors, PLATFORM_AGENT_ROOTS.claude, ".agent.md")
-  await validateAgentSurface(root, errors, PLATFORM_AGENT_ROOTS.codex, ".toml")
 
   const claudeMarketplace = await readJson<MarketplaceManifest>(
     root,

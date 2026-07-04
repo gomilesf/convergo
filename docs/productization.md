@@ -41,18 +41,13 @@ convergo
 |   |-- cvg-plan-loop/
 |   |-- cvg-build-loop/
 |   `-- cvg-multi-session/
-|-- agents-src/
-|   |-- claude/          auxiliary agents as Claude agent markdown
-|   `-- codex/           auxiliary agents as Codex TOML
 |-- plugins/
 |   |-- codex/
 |   |   |-- .codex-plugin/plugin.json
-|   |   |-- .codex/agents/convergo/
 |   |   `-- skills/        all nine skills
 |   |-- claude/
 |   |   |-- .claude-plugin/plugin.json
-|   |   |-- agents/        auxiliary Claude agents
-|   |   `-- skills/        six base skills
+|   |   `-- skills/        all nine skills
 |   `-- generic/
 |       |-- .cursor-plugin/plugin.json
 |       `-- skills/        six base skills
@@ -77,31 +72,32 @@ Native plugin loaders discover skills from a plugin root. Convergo uses differen
 - Codex marketplace source points at `./plugins/codex`, whose `.codex-plugin/plugin.json` points at `./skills/` and exposes all nine skills.
 - Cursor, OpenCode, Pi, and Gemini-facing surfaces use the base-only generated skills under `./plugins/generic/skills`.
 
-### Auxiliary agents are vendored as a minimal closure
+### Auxiliary personas are skill-local prompt assets
 
-The base DD-derived skills dispatch a small set of Compound Engineering auxiliary agents. Convergo vendors only the platform agents directly referenced by its public skills:
+The base DD-derived skills dispatch a small set of Compound Engineering-derived
+specialist personas. Each persona is a markdown prompt asset under the owning
+skill's `references/personas/` directory, dispatched as a generic subagent when
+the platform's subagent primitive is available:
 
 ```text
-cvg-best-practices-researcher
-cvg-repo-research-analyst
-cvg-correctness-reviewer
-cvg-testing-reviewer
-cvg-security-reviewer
-cvg-adversarial-reviewer
-cvg-reliability-reviewer
+cvg-code-review    correctness, testing, security, adversarial, reliability reviewers
+cvg-plan           best-practices-researcher, repo-research-analyst
+cvg-plan-review    feasibility, security-lens, scope-guardian reviewers
 ```
 
-Claude Code receives these under `plugins/claude/agents/*.agent.md`. Codex keeps the equivalent TOML agents under `plugins/codex/.codex/agents/convergo/*.toml`, and `bun run install:codex-agents` installs them into the active Codex root at `agents/convergo/*.toml` with `convergo/install-manifest.json`. Generic hosts still receive the base skills; when auxiliary delegation is unavailable, the skills instruct the active agent to perform the same checks itself.
+No platform-level custom-agent registration is used; the skill roots are the
+complete install surface on every host, so plugin installation is one step
+everywhere. When auxiliary delegation is unavailable, the skills instruct the
+active agent to perform the same checks itself.
 
-Plan-review personas are vendored differently: `cvg-plan-review` reads
-skill-local prompt assets from `references/personas/` and dispatches generic
-subagents when available. This keeps feasibility, security-lens, and
-scope-guardian review self-contained without depending on platform-level custom
-agent registration.
+Earlier versions registered typed `cvg-*` agents (Claude agent markdown and
+Codex TOML under `agents-src/`) and required `bun run install:codex-agents` on
+Codex. That machinery is removed; existing `$CODEX_HOME/agents/convergo/`
+installs are orphaned and safe to delete.
 
 ### Generated skill roots are committed
 
-`skills-src/` and `agents-src/` are the canonical source trees. `scripts/sync-platform-skills.ts` generates the platform roots:
+`skills-src/` is the canonical source tree. `scripts/sync-platform-skills.ts` generates the platform roots:
 
 ```bash
 bun run sync
@@ -115,12 +111,8 @@ The generated roots are committed because users install directly from GitHub and
 
 ```text
 skills-src/               9 skills
-agents-src/claude         10 agents
-agents-src/codex          10 agents
 plugins/codex/skills      9 skills
-plugins/codex/.codex      10 agents
-plugins/claude/skills     6 skills
-plugins/claude/agents     10 agents
+plugins/claude/skills     9 skills
 plugins/generic/skills    6 skills
 ```
 
@@ -139,10 +131,6 @@ Use these checks after changing product surfaces:
 ```bash
 bun run sync
 bun run validate
-tmpdir=$(mktemp -d -t convergo-agents-XXXXXX)
-bun run install:codex-agents -- --codex-home "$tmpdir"
-test -f "$tmpdir/agents/convergo/cvg-correctness-reviewer.toml"
-rm -rf "$tmpdir"
 bun test
 bun run plugin:validate
 ```

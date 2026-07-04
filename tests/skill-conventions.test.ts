@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test"
 import { readdirSync, readFileSync } from "node:fs"
 import path from "node:path"
-import { AUXILIARY_AGENT_NAMES, PLATFORM_SKILL_ROOTS } from "../src/metadata"
+import { PLATFORM_SKILL_ROOTS } from "../src/metadata"
 import { PROTOCOL_CONSUMER_SKILLS, stripPlatform, type Platform } from "../src/platform-content"
 
 const ROOT = process.cwd()
@@ -12,6 +12,13 @@ const SKILL_ROOTS = [
   PLATFORM_SKILL_ROOTS.codex,
   PLATFORM_SKILL_ROOTS.claude,
   PLATFORM_SKILL_ROOTS.generic,
+] as const
+const CODE_REVIEW_PERSONAS = [
+  "adversarial-reviewer",
+  "correctness-reviewer",
+  "reliability-reviewer",
+  "security-reviewer",
+  "testing-reviewer",
 ] as const
 
 type Skill = {
@@ -104,8 +111,8 @@ describe("skill conventions", () => {
     }
   })
 
-  test("skill auxiliary agent references are packaged", () => {
-    expect(referencedAuxiliaryAgents()).toEqual(AUXILIARY_AGENT_NAMES)
+  test("skills reference no typed cvg agents", () => {
+    expect(referencedAuxiliaryAgents()).toEqual([])
   })
 
   test("plan review vendors CE-style persona prompt assets", () => {
@@ -170,23 +177,44 @@ describe("skill conventions", () => {
       expect(skillContent).toContain("Do not write inline auxiliary reviewer artifacts")
       expect(skillContent).toContain('"agent_id": "<platform child id: spawn, session, or thread id, or null>"')
       expect(skillContent).toContain('"artifact_written": true')
+      expect(skillContent).toContain("references/personas/<reviewer-name>.md")
+      expect(skillContent).toContain("Do not use typed agent names")
+
+      for (const persona of CODE_REVIEW_PERSONAS) {
+        const personaContent = readFileSync(
+          path.join(ROOT, relativeRoot, "cvg-code-review", "references", "personas", `${persona}.md`),
+          "utf8",
+        )
+
+        expect(personaContent, `${relativeRoot}/${persona}`).toContain(
+          "do not consult project memory, prior sessions, rollout summaries, or",
+        )
+        expect(personaContent, `${relativeRoot}/${persona}`).toContain(
+          "Return exactly one raw JSON object matching the findings schema",
+        )
+        expect(personaContent, `${relativeRoot}/${persona}`).toContain(
+          "memory citations, or any text after the JSON",
+        )
+        expect(skillContent, `${relativeRoot}/${persona}`).toContain(`\`${persona}\``)
+      }
     }
+  })
 
-    const reviewerAgents = AUXILIARY_AGENT_NAMES.filter((name) => name.endsWith("-reviewer"))
-    const agentRoots = [
-      { extension: ".agent.md", root: "agents-src/claude" },
-      { extension: ".toml", root: "agents-src/codex" },
-      { extension: ".agent.md", root: "plugins/claude/agents" },
-      { extension: ".toml", root: "plugins/codex/.codex/agents/convergo" },
-    ]
+  test("plan research personas ship as skill-local prompt assets", () => {
+    for (const relativeRoot of SKILL_ROOTS) {
+      const skillContent = readFileSync(path.join(ROOT, relativeRoot, "cvg-plan", "SKILL.md"), "utf8")
 
-    for (const agentRoot of agentRoots) {
-      for (const agentName of reviewerAgents) {
-        const content = readFileSync(path.join(ROOT, agentRoot.root, `${agentName}${agentRoot.extension}`), "utf8")
+      expect(skillContent).toContain("references/personas/<researcher-name>.md")
+      expect(skillContent).toContain("Do not use typed agent names")
 
-        expect(content).toContain("do not consult project memory, prior sessions, rollout summaries, or")
-        expect(content).toContain("Return exactly one raw JSON object matching the findings schema")
-        expect(content).toContain("memory citations, or any text after the JSON")
+      for (const persona of ["best-practices-researcher", "repo-research-analyst"]) {
+        const personaContent = readFileSync(
+          path.join(ROOT, relativeRoot, "cvg-plan", "references", "personas", `${persona}.md`),
+          "utf8",
+        )
+
+        expect(personaContent.trim().length, `${relativeRoot}/${persona}`).toBeGreaterThan(0)
+        expect(skillContent, `${relativeRoot}/${persona}`).toContain(`\`${persona}\``)
       }
     }
   })
@@ -232,20 +260,17 @@ describe("skill conventions", () => {
       }
     }
 
-    const reviewerAgents = AUXILIARY_AGENT_NAMES.filter((name) => name.endsWith("-reviewer"))
-    for (const agentRoot of [
-      { extension: ".agent.md", root: "agents-src/claude" },
-      { extension: ".toml", root: "agents-src/codex" },
-      { extension: ".agent.md", root: "plugins/claude/agents" },
-      { extension: ".toml", root: "plugins/codex/.codex/agents/convergo" },
-    ]) {
-      for (const agentName of reviewerAgents) {
-        const content = readFileSync(path.join(ROOT, agentRoot.root, `${agentName}${agentRoot.extension}`), "utf8")
+    for (const relativeRoot of SKILL_ROOTS) {
+      for (const persona of CODE_REVIEW_PERSONAS) {
+        const content = readFileSync(
+          path.join(ROOT, relativeRoot, "cvg-code-review", "references", "personas", `${persona}.md`),
+          "utf8",
+        )
 
-        expect(content, agentName).toContain("defined in the findings schema included in your prompt")
-        expect(content, agentName).not.toContain("subagent template")
-        expect(content, agentName).not.toContain("soft-bucket")
-        expect(content, agentName).not.toContain("P0 escape")
+        expect(content, persona).toContain("defined in the findings schema included in your prompt")
+        expect(content, persona).not.toContain("subagent template")
+        expect(content, persona).not.toContain("soft-bucket")
+        expect(content, persona).not.toContain("P0 escape")
       }
     }
   })

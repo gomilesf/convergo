@@ -42,8 +42,8 @@ Claude Code — everything ships with the plugin:
 /plugin install convergo
 ```
 
-Codex and every other host: see [Install](#install) — Codex adds a one-time
-auxiliary-agent install.
+Codex and every other host: see [Install](#install) — every host is a
+single plugin install.
 
 Then, in a repo with an issue to work on:
 
@@ -224,24 +224,27 @@ protocol (transport binding, callbacks, waiting, feedback routing, exit
 gates) that the two loop skills bind to. It is internal — you never invoke
 it directly.
 
-### Auxiliary Agents
+### Auxiliary Personas
 
-`/cvg-plan` and `/cvg-code-review` fan out to a small reviewer/researcher set
-adapted from CE. Code-review agents return raw JSON against the shared
-findings schema (`cvg-code-review/references/findings-schema.md`).
-Plan-review personas are skill-local prompt assets under
-`cvg-plan-review/references/personas/` and need no platform agent
-registration.
+`/cvg-plan`, `/cvg-plan-review`, and `/cvg-code-review` fan out to a small
+reviewer/researcher set adapted from CE. Every persona is a skill-local prompt
+asset under the owning skill's `references/personas/`, dispatched as a generic
+subagent — no platform agent registration on any host. Code-review personas
+return raw JSON against the shared findings schema
+(`cvg-code-review/references/findings-schema.md`).
 
-| Agent | Used by | When |
+| Persona | Used by | When |
 | --- | --- | --- |
-| `cvg-best-practices-researcher` | `/cvg-plan` | non-obvious design work |
-| `cvg-repo-research-analyst` | `/cvg-plan` | always |
-| `cvg-correctness-reviewer` | `/cvg-code-review` | always |
-| `cvg-testing-reviewer` | `/cvg-code-review` | always |
-| `cvg-security-reviewer` | `/cvg-code-review` | auth, input, permissions, data handling |
-| `cvg-adversarial-reviewer` | `/cvg-code-review` | large or high-risk diffs |
-| `cvg-reliability-reviewer` | `/cvg-code-review` | error handling, retries, timeouts, jobs |
+| `best-practices-researcher` | `/cvg-plan` | non-obvious design work |
+| `repo-research-analyst` | `/cvg-plan` | always |
+| `correctness-reviewer` | `/cvg-code-review` | always |
+| `testing-reviewer` | `/cvg-code-review` | always |
+| `security-reviewer` | `/cvg-code-review` | auth, input, permissions, data handling |
+| `adversarial-reviewer` | `/cvg-code-review` | large or high-risk diffs |
+| `reliability-reviewer` | `/cvg-code-review` | error handling, retries, timeouts, jobs |
+| `feasibility-reviewer` | `/cvg-plan-review` | standard and full plans |
+| `security-lens-reviewer` | `/cvg-plan-review` | auth, data, external APIs, secrets |
+| `scope-guardian-reviewer` | `/cvg-plan-review` | many slices or scope creep |
 
 ### Working Artifacts
 
@@ -291,7 +294,9 @@ planning and review skills selectively, or skip Convergo entirely.
 /plugin install convergo
 ```
 
-Ships all nine skills and the auxiliary `cvg-*` agents.
+Ships all nine skills. Specialist reviewer and researcher behavior lives
+inside the skills as local persona prompts, so the plugin install is
+self-contained.
 `claude plugin details convergo` shows the component inventory and the
 projected token cost per skill.
 
@@ -299,13 +304,8 @@ projected token cost per skill.
 
 1. Open **Plugins** from the sidebar, click **Add plugin marketplace**.
 2. Source: `gomilesf/convergo`, Git ref: `main`, sparse paths blank.
-3. Add the marketplace, select **Convergo**, install **convergo**.
-4. Install the auxiliary agents from a checkout, then restart Codex:
-
-   ```bash
-   git clone https://github.com/gomilesf/convergo && cd convergo
-   bun install && bun run install:codex-agents
-   ```
+3. Add the marketplace, select **Convergo**, install **convergo**, then
+   restart Codex. The install is self-contained; no extra agent setup step.
 
 ### Codex CLI
 
@@ -314,14 +314,17 @@ codex plugin marketplace add gomilesf/convergo
 codex   # inside: /plugins -> Convergo -> install convergo
 ```
 
-Install the auxiliary agents from a checkout (as above), then restart Codex.
-For a non-default profile, run every step against the same `CODEX_HOME`:
+Restart Codex after the install completes. For a non-default profile, run
+every step against the same `CODEX_HOME`:
 
 ```bash
 CODEX_HOME="$HOME/.codex/profiles/work" codex plugin marketplace add gomilesf/convergo
 CODEX_HOME="$HOME/.codex/profiles/work" codex
-CODEX_HOME="$HOME/.codex/profiles/work" bun run install:codex-agents
 ```
+
+Earlier convergo versions installed typed `cvg-*` agents into
+`$CODEX_HOME/agents/convergo/`. Current skills no longer use them; remove that
+directory (and `$CODEX_HOME/convergo/install-manifest.json`) if present.
 
 ### Cursor
 
@@ -453,9 +456,8 @@ gemini extensions install "$PWD"
 
 ```text
 skills-src/        Canonical skill sources (with platform marker blocks)
-agents-src/        Canonical auxiliary agent sources
-plugins/codex/     Codex plugin root: nine Codex-stripped skills + Codex agents
-plugins/claude/    Claude Code plugin root: nine Claude-stripped skills + Claude agents
+plugins/codex/     Codex plugin root: nine Codex-stripped skills
+plugins/claude/    Claude Code plugin root: nine Claude-stripped skills
 plugins/generic/   Base-only skill root for generic hosts
 evals/             Trigger-routing eval cases (run with bun run eval:trigger)
 .claude-plugin/    Claude Code marketplace metadata

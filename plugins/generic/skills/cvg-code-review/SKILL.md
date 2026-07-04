@@ -80,36 +80,50 @@ Skip this step for `Review mode: focused-re-review`. Focused re-review is a
 scoped check of prior findings plus the repair diff; it must not dispatch
 auxiliary reviewers or synthesize inline auxiliary coverage.
 
-Dispatch sub-agent reviewers in parallel with your own step 4 review.
+Dispatch sub-agent reviewers in parallel with your own step 4 review. Each
+reviewer is a skill-local persona under `references/personas/`.
 
-**Always dispatch (both in parallel):**
+**Always select (both in parallel):**
 
-- `cvg-correctness-reviewer` - "Review for logic errors, edge cases, state bugs,
+- `correctness-reviewer` - "Review for logic errors, edge cases, state bugs,
   error propagation. Intent: <intent>. Plan: <path>. Base: <base ref>."
-- `cvg-testing-reviewer` - "Review for coverage gaps, weak assertions, brittle
+- `testing-reviewer` - "Review for coverage gaps, weak assertions, brittle
   tests. Intent: <intent>. Plan: <path>. Base: <base ref>."
 
 **When diff touches auth, public endpoints, user input, permissions, or data handling:**
 
-- `cvg-security-reviewer` - "Review for security vulnerabilities. Intent:
+- `security-reviewer` - "Review for security vulnerabilities. Intent:
   <intent>. Plan: <path>. Base: <base ref>."
 
 **When diff is large (>=50 changed lines) or touches auth, payments, data
 mutations, or external APIs:**
 
-- `cvg-adversarial-reviewer` - "Review for failure scenarios and abuse cases.
+- `adversarial-reviewer` - "Review for failure scenarios and abuse cases.
   Intent: <intent>. Plan: <path>. Base: <base ref>."
 
 **When diff touches error handling, retries, timeouts, or background jobs:**
 
-- `cvg-reliability-reviewer` - "Review for production reliability issues.
+- `reliability-reviewer` - "Review for production reliability issues.
   Intent: <intent>. Plan: <path>. Base: <base ref>."
+
+For each selected reviewer:
+
+1. Read the skill-local prompt asset at
+   `references/personas/<reviewer-name>.md`.
+2. Dispatch a generic subagent using the platform's subagent primitive when
+   available. The sub-agent prompt is the persona file content followed by the
+   review prompt above and the shared dispatch context below (stage, findings
+   schema, output contract).
+3. Do not use typed agent names, `subagent_type`, or platform-level
+   custom-agent registration for these reviewer personas.
+4. If generic subagents are unavailable, perform the same checks yourself.
 
 When auxiliary delegation is available, run the relevant reviewers in parallel.
 If it is not available, perform the same checks yourself.
 
 **Final fresh exit mode:** When the task says `Review mode: final-fresh-exit`,
-selected auxiliary reviewers must be real platform dispatches. In this mode,
+selected auxiliary reviewers must be real generic-subagent dispatches with the
+persona prompt. In this mode,
 inline auxiliary coverage cannot produce a final exit pass. If any selected
 reviewer cannot be dispatched, has a null `agent_id`, returns
 invalid JSON, or fails to write its artifact, set the verdict to **Not ready**
@@ -129,7 +143,7 @@ the record.
 
 ```json
 {
-  "cvg-security-reviewer": {
+  "security-reviewer": {
     "status": "dispatched | inline | skipped | failed",
     "agent_id": "<platform child id: spawn, session, or thread id, or null>",
     "artifact_written": true
@@ -138,8 +152,8 @@ the record.
 ```
 
 Do not collapse selected reviewers to plain status strings. The audit artifact
-must make it possible to distinguish a real platform reviewer dispatch from an
-inline fallback with the same name.
+must make it possible to distinguish a real generic-subagent dispatch from an
+inline fallback with the same reviewer persona.
 
 When dispatching auxiliary reviewers, include the project stage and the
 domain-risk override rule in the sub-agent prompt. Include the full content of
@@ -230,7 +244,7 @@ Start the response with:
 
 ```text
 Audit artifact: /tmp/convergo/cvg-code-review/<run-id>/
-Auxiliary coverage: cvg-correctness-reviewer=<dispatched|inline|failed>, cvg-testing-reviewer=<dispatched|inline|failed>, cvg-security-reviewer=<dispatched|inline|skipped|failed>, cvg-adversarial-reviewer=<dispatched|inline|skipped|failed>, cvg-reliability-reviewer=<dispatched|inline|skipped|failed>
+Auxiliary coverage: correctness-reviewer=<dispatched|inline|failed>, testing-reviewer=<dispatched|inline|failed>, security-reviewer=<dispatched|inline|skipped|failed>, adversarial-reviewer=<dispatched|inline|skipped|failed>, reliability-reviewer=<dispatched|inline|skipped|failed>
 ```
 
 The response coverage line is a compact summary only. `review.json` must retain

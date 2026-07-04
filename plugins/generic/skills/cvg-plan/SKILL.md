@@ -46,19 +46,27 @@ Read the issue goal, acceptance criteria, and non-goals from the task context.
 
 ### 2. Research the problem and explore the codebase
 
-Two parallel tracks. Dispatch both sub-agents simultaneously:
+Two parallel tracks. Each researcher is a skill-local persona under
+`references/personas/`. Dispatch both sub-agents simultaneously:
 
-**Best practice research:** Spawn `cvg-best-practices-researcher` with prompt:
+**Best practice research:** Use `best-practices-researcher` with prompt:
 "Research best practices for: <planning context summary>". This prevents
 reinventing a duck-typed version of a well-known solution. It is especially
 important for new infrastructure, protocol/API design, and cross-cutting
 concerns. For simple changes where the approach is obvious, skip this.
 
-**Codebase exploration:** Spawn `cvg-repo-research-analyst` with prompt:
+**Codebase exploration:** Use `repo-research-analyst` with prompt:
 "Scope: technology, architecture, patterns. <planning context summary>". The
 `Scope:` prefix limits the research to technology stack, architecture, and
 implementation patterns, skipping issue conventions and templates the planner
 does not need.
+
+For each track: read the skill-local prompt asset at
+`references/personas/<researcher-name>.md` and dispatch a generic subagent
+using the platform's subagent primitive when available. The sub-agent prompt is
+the persona file content followed by the track prompt above.
+Do not use typed agent names, `subagent_type`, or platform-level custom-agent
+registration for these researcher personas.
 
 When auxiliary delegation is available, run both tracks in parallel. If it is
 not available, perform both checks yourself.
