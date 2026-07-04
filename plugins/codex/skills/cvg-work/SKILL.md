@@ -116,6 +116,16 @@ what the code reviewer needs to know:
   not in the matrix"
 - **Tradeoffs made** - "Could have done A or B, chose A because Z, at the cost
   of W"
+- **Accepted gaps** - behavior deliberately left out, stated as a standing
+  decision with rationale and revisit condition: "X stays unsupported: out of
+  launch scope because Y; revisit when Z"
+
+Notes are fresh-reviewer evidence. Record decisions as standing statements
+without review provenance: no review round numbers, no finding IDs, no
+"reviewer found X" or "fixed in commit Y" status claims. Whether something is
+fixed is the diff's job to show; a provenance trail hands the next fresh
+reviewer the previous reviewer's search map. Adjudication history belongs in
+the per-run scratch directory, not here.
 
 Do not narrate routine implementation. Commit the notes file alongside the
 implementation when it contains information a reviewer needs.

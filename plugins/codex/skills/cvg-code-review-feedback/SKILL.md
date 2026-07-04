@@ -59,7 +59,10 @@ For local code bugs, pattern bugs, and implementation-owned verification gaps:
 - repair the implementation,
 - for pattern bugs, audit adjacent planned surfaces and report what was checked,
 - update implementation notes when the feedback reveals a deviation, assumption,
-  or audited pattern the reviewer needs to know.
+  or audited pattern the reviewer needs to know — written as standing decisions
+  without review provenance (no round numbers, finding IDs, or fix-status
+  claims): the next fresh reviewer must inherit the decision record, not this
+  round's search map.
 
 For plan gaps, contract gaps, and systemic design gaps:
 

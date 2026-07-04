@@ -26,6 +26,16 @@ for (const warning of result.warnings) {
 }
 
 const sourceSkills = await listSkillDirectories(root, PLATFORM_SKILL_ROOTS.source)
+
+const readme = await Bun.file(`${root}/README.md`).text()
+const badgeCount = readme.match(/badge\/skills-(\d+)-/)?.[1]
+if (badgeCount !== String(sourceSkills.length)) {
+  console.error(
+    `README skills badge says ${badgeCount ?? "nothing"}, but skills-src has ${sourceSkills.length} skills.`,
+  )
+  process.exit(1)
+}
+
 const codexSkills = await listSkillDirectories(root, PLATFORM_SKILL_ROOTS.codex)
 const claudeSkills = await listSkillDirectories(root, PLATFORM_SKILL_ROOTS.claude)
 const codexAgents = await listAgentFiles(root, PLATFORM_AGENT_ROOTS.codex, ".toml")

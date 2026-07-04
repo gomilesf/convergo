@@ -19,10 +19,11 @@
 Agent-written code needs review, and agent review needs a loop: find issues,
 fix them, review again. The dirty secret is that this loop often **doesn't
 converge** — each round adds patches, prose, and pseudo-code instead of
-closing in on done. Convergo is a plugin that turns that loop into one with a
-provable exit: **nothing ships until a fresh reviewer — a newly spawned
-session that has never seen the code — completes a full pass and reports no
-blockers.**
+closing in on done. Convergo is a plugin that bounds that loop by
+construction. **It exits only when a fresh reviewer — a newly spawned session
+that has never seen the code — completes a full pass and reports no blockers.
+After three rounds without one, it stops and escalates to you instead of
+churning.**
 
 It is a convergence-focused fork of
 [Compound Engineering](https://github.com/EveryInc/compound-engineering-plugin):
@@ -41,18 +42,8 @@ Claude Code — everything ships with the plugin:
 /plugin install convergo
 ```
 
-Codex — the plugin installs from the marketplace, plus a one-time agent
-install from a checkout (auxiliary agents cannot ship through the Codex
-marketplace):
-
-```bash
-codex plugin marketplace add gomilesf/convergo
-codex        # inside: /plugins -> Convergo -> install convergo
-
-git clone https://github.com/gomilesf/convergo && cd convergo
-bun install && bun run install:codex-agents
-# restart Codex
-```
+Codex and every other host: see [Install](#install) — Codex adds a one-time
+auxiliary-agent install.
 
 Then, in a repo with an issue to work on:
 
@@ -61,8 +52,6 @@ Then, in a repo with an issue to work on:
 ... review the plan yourself ...
 /cvg-build-loop docs/plans/42-plan.md
 ```
-
-Every other host and option: [Install](#install).
 
 ## Why Convergo Exists
 
@@ -114,9 +103,14 @@ worker        intake first, then repair: F1 is implementation-owned -> fixes it
 you           decide burst behavior (or send it back through the planner)
 
 worker        finishes the repair -> new head commit
-reviewer      same session, focused re-review of the fixes -> pass
-orchestrator  spawns a NEW fresh reviewer for a full first pass
-fresh review  -> "Ready with fixes. No blockers. Two P2 notes."
+
+reviewer      (same session) focused re-review of the fixes -> pass
+
+orchestrator  spawns a NEW FRESH REVIEWER session
+
+reviewer      (new session) full first pass
+              -> "Ready with fixes. No blockers. Two P2 notes."
+
 orchestrator  exits the loop: base -> head, findings history, P2 list for you
 ```
 
@@ -129,7 +123,10 @@ seen the code before.
 
 ![The fresh-reviewer exit gate](docs/assets/gate.webp)
 
-Every rule below is enforced in the skills, not just described here.
+Every rule below is written into the skills, not just described here. What
+can be machine-checked is — the findings schema is validated per finding,
+and the generated platform builds are byte-checked by tests; the behavioral
+rules are prompt contracts, exercised end-to-end by the release smoke test.
 
 **Feedback goes through intake, not straight to edits.** The planner or
 worker that produced the artifact classifies each finding first — code bug,
@@ -140,9 +137,16 @@ plan, contract, and systemic gaps instead of patching forward.
 **Findings carry evidence, not vibes.** Sub-reviewers return findings against
 a shared schema: `P0`–`P3` severity, discrete confidence anchors, a
 quote-the-line gate for high-confidence claims. Low-confidence findings are
-dropped at merge unless they are critical. Reviewers run under a fresh-review
-evidence boundary — no project memory, no prior sessions, no rollout history;
-only the plan, the diff, and the repo.
+dropped at merge unless they are critical, and P3 style findings are never
+emitted at all — style belongs to tooling, not the loop. Reviewers run under
+a fresh-review evidence boundary — no project memory, no prior sessions, no
+rollout history; only the plan, the diff, and the repo. The worker's impl
+notes are the one
+deliberate exception: they ship with the diff so the reviewer sees declared
+deviations, assumptions, and accepted gaps. The notes carry decisions, never
+review provenance — no round numbers, finding IDs, or fix-status claims — so
+a fresh reviewer inherits the decision record, not the previous reviewer's
+search map.
 
 **Exit requires a fresh reviewer.** A same-reviewer pass is never the exit
 condition. After repairs, the original reviewer re-reviews the fixes; the
@@ -161,8 +165,14 @@ full surfaces + invariant-matrix treatment. Plans never contain code. Open
 behavior decisions that bind multiple slices go into a behavior contract
 rather than being invented downstream.
 
-**A human sits between planning and building.** The plan loop produces a
-plan; the build loop starts only when you explicitly trigger it.
+**The loop runs unattended but finds you at three defined points.** The
+build loop starts only when you explicitly trigger it on a reviewed plan —
+this gate is where your judgment counts most: check that the behavior
+contract records decisions you actually want, that each slice's "done when"
+is verifiable, and that the invariant matrix covers every surface you know
+about. Mid-loop, a worker blocked on a missing behavior decision stops and
+routes the question to you instead of inventing an answer. And when the
+round cap trips, the escalation lands with you.
 
 ## Two Ways to Use It
 
@@ -208,7 +218,11 @@ the specialist's own prose.
 | `/cvg-code-review-feedback` | Classify and handle code-review blockers inside the worker session | Claude Code, Codex, generic |
 | `/cvg-plan-loop` | Orchestrate planner -> fresh plan review -> repair -> final fresh review | Claude Code, Codex |
 | `/cvg-build-loop` | Orchestrate worker -> fresh code review -> repair -> final fresh review -> QA gates | Claude Code, Codex |
-| `/cvg-multi-session` | Shared multi-session protocol: transport binding, callbacks, waiting, feedback routing, exit gates | Claude Code, Codex |
+
+A ninth skill, `cvg-multi-session`, ships alongside these: the shared
+protocol (transport binding, callbacks, waiting, feedback routing, exit
+gates) that the two loop skills bind to. It is internal — you never invoke
+it directly.
 
 ### Auxiliary Agents
 
@@ -231,23 +245,29 @@ registration.
 
 ### Working Artifacts
 
-Convergo leaves a reviewable paper trail:
+Convergo leaves a durable paper trail in the repo:
 
-- `docs/plans/<issue-id>-plan.md` — the plan; `<issue-id>-contract.md` beside
-  it when a behavior contract is warranted
+- `docs/plans/<issue-id>-plan.md` — the plan (`<issue-id>` is the issue
+  number or a slug); `<issue-id>-contract.md` beside it when a behavior
+  contract is warranted
 - `docs/impl-notes/<issue-id>.md` — worker decisions, deviations, and flagged
   assumptions the reviewer needs
+
+Per-run review scratch deliberately lives outside the repo — inside the
+worktree it would leak earlier rounds' findings to the next fresh reviewer:
+
 - `/tmp/convergo/cvg-code-review/<run-id>/` and
-  `/tmp/convergo/cvg-plan-review/<run-id>/` — per-run audit artifacts:
-  `review.json` (verdict, merged findings, auxiliary coverage) plus one JSON
-  per sub-reviewer
+  `/tmp/convergo/cvg-plan-review/<run-id>/` — `review.json` (verdict, merged
+  findings, auxiliary coverage) plus one JSON per sub-reviewer. Ephemeral;
+  inspect during or right after a run.
 
 ## Cost and Fit
 
 **What a loop spends.** A build-loop run is one worker session, a fresh
 reviewer per round (each dispatching two or more sub-reviewer agents),
-focused re-reviews, and a final fresh pass — expect an order of magnitude
-more tokens than telling an agent to "just implement it". That is the price
+focused re-reviews, and a final fresh pass — expect roughly an order of
+magnitude more tokens than telling an agent to "just implement it" (our
+observed runs, not a benchmark). That is the price
 of independent review, and it is why the loop is capped at three rounds. The
 six base skills used standalone cost roughly what any single-session skill
 costs; `claude plugin details convergo` shows the per-skill token numbers.
@@ -335,7 +355,8 @@ gemini extensions install https://github.com/gomilesf/convergo
 ### Upgrading
 
 Installs resolve by version: upgrades need a version bump on the marketplace
-side and an explicit update on yours.
+side and an explicit update on yours. (`convergo-plugin` is the marketplace's
+registered name; `convergo` is the plugin inside it.)
 
 ```text
 /plugin marketplace update convergo-plugin    (Claude Code)
