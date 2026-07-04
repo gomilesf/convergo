@@ -42,8 +42,9 @@ callback templates, and round cap — with these routing overrides:
 
 1. **Worker (Phase 1):** codex-backed specialist (pattern below), sandbox
    `workspace-write`, role skill `cvg-work`.
-2. **Fresh code review (Phase 2):** codex-backed specialist, sandbox
-   `read-only`, role skill `cvg-code-review`. Codex sessions run through
+2. **Fresh code review (Phase 2):** codex-backed specialist with the
+   reviewer sandbox (see pattern), role skill `cvg-code-review`. Codex
+   sessions run through
    `codex exec`, which has no generic subagent primitive, so expect
    auxiliary persona coverage to run inline (the role skill's documented
    fallback). Inline coverage is valid for first-pass reviews; it can never
@@ -86,8 +87,14 @@ background Claude agent:
      foreground Bash timeout) with the sandbox this role requires, the
      final message written to a file, and the run header captured:
      `codex exec --sandbox workspace-write -o <scratch>/last-message.txt
-     "<prompt>" > <scratch>/run-header.log 2>&1` for the worker,
-     `--sandbox read-only` for reviewers;
+     "<prompt>" > <scratch>/run-header.log 2>&1` for the worker, launched
+     from the worktree. Reviewers also use `--sandbox workspace-write` but
+     launched from a scratch working directory (`-C <scratch>`): reads are
+     unrestricted so the reviewer can read the repo, while writes stay
+     OS-confined to scratch and /tmp — the repo is outside the writable
+     roots, and the role skill can still write its /tmp/convergo findings
+     and audit artifacts. Never use `--sandbox read-only` for reviewers: it
+     blocks /tmp writes, so review artifacts cannot be written at all;
   3. stay in-turn and wait with repeated bounded foreground wait commands,
      rerun until the file lands:
      `for i in $(seq 1 100); do [ -s <scratch>/last-message.txt ] && { echo
@@ -110,8 +117,8 @@ relay now — the resumed wrapper reads the `-o` file and finishes.
   as a config override on every resume, for example
   `codex exec resume <session-id> -c sandbox_mode="workspace-write"
   "<follow-up>"` for the worker. A resume without the override re-resolves
-  the sandbox from the user's codex config, which can silently escalate a
-  read-only reviewer to full access or leave the worker unable to write.
+  the sandbox from the user's codex config, which can silently escalate the
+  reviewer to full access or leave the worker unable to write.
 - The wrapper must not read the repo, run other commands, review, summarize,
   or filter codex output. Relay fidelity is its whole job.
 - `workspace-write` covers the directory codex is launched from. If the task

@@ -1,6 +1,6 @@
 {
   "name": "convergo",
-  "version": "0.3.3",
+  "version": "0.3.4",
   "description": "Disciplined software engineering for coding agents: plan, build, and review in bounded loops until an independent fresh reviewer signs off.",
   "author": {
     "name": "gomilesf",
