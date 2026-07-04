@@ -1,7 +1,7 @@
 {
   "name": "convergo",
   "displayName": "Convergo",
-  "version": "0.2.5",
+  "version": "0.3.0",
   "description": "Disciplined software engineering for coding agents: sliced plans, TDD implementation, and plan-anchored code review.",
   "author": {
     "name": "gomilesf",

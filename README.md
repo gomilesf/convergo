@@ -7,7 +7,7 @@
 **Plan → review → build loops for coding agents — that actually terminate.**
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-e8442e)](LICENSE)
-[![Skills](https://img.shields.io/badge/skills-9-2b2b28)](#skills)
+[![Skills](https://img.shields.io/badge/skills-11-2b2b28)](#skills)
 [![Platforms](https://img.shields.io/badge/platforms-Claude%20Code%20%C2%B7%20Codex%20%C2%B7%20Cursor%20%C2%B7%20OpenCode%20%C2%B7%20Pi%20%C2%B7%20Gemini-8a7a5c)](#install)
 
 [Quick Start](#quick-start) · [Why](#why-convergo-exists) · [How It Works](#the-rules-that-make-it-converge) · [Skills](#skills) · [Install](#install)
@@ -206,6 +206,13 @@ build ships only its own transport mechanics — the copies under
 Specialist identity always comes from the platform tool result, never from
 the specialist's own prose.
 
+On Claude Code, two preset skills run the same loops with a split-engine
+routing: `/cvg-hybrid-plan-loop` (a high-taste Claude design model plans,
+Codex CLI sessions review) and `/cvg-hybrid-build-loop` (Codex implements
+and takes every first-pass review round, the design model holds the final
+exit gate — a clean cheap-tier review promotes to a design-tier
+`final-fresh-exit` review instead of ending the loop).
+
 ## Skills
 
 | Skill | Purpose | Platforms |
@@ -218,8 +225,10 @@ the specialist's own prose.
 | `/cvg-code-review-feedback` | Classify and handle code-review blockers inside the worker session | Claude Code, Codex, generic |
 | `/cvg-plan-loop` | Orchestrate planner -> fresh plan review -> repair -> final fresh review | Claude Code, Codex |
 | `/cvg-build-loop` | Orchestrate worker -> fresh code review -> repair -> final fresh review -> QA gates | Claude Code, Codex |
+| `/cvg-hybrid-plan-loop` | Plan loop preset: a design-tier Claude model plans, Codex CLI sessions review | Claude Code |
+| `/cvg-hybrid-build-loop` | Build loop preset: Codex CLI implements and reviews first, a design-tier Claude model holds the final exit gate | Claude Code |
 
-A ninth skill, `cvg-multi-session`, ships alongside these: the shared
+One more skill, `cvg-multi-session`, ships alongside these: the shared
 protocol (transport binding, callbacks, waiting, feedback routing, exit
 gates) that the two loop skills bind to. It is internal — you never invoke
 it directly.
@@ -294,7 +303,7 @@ planning and review skills selectively, or skip Convergo entirely.
 /plugin install convergo
 ```
 
-Ships all nine skills. Specialist reviewer and researcher behavior lives
+Ships all eleven skills. Specialist reviewer and researcher behavior lives
 inside the skills as local persona prompts, so the plugin install is
 self-contained.
 `claude plugin details convergo` shows the component inventory and the

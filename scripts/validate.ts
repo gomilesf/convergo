@@ -3,6 +3,7 @@ import {
   CLAUDE_SKILLS,
   CODEX_SKILLS,
   PLATFORM_SKILL_ROOTS,
+  SOURCE_SKILLS,
   listSkillDirectories,
   validateProductization,
 } from "../src/metadata"
@@ -39,7 +40,7 @@ const claudeSkills = await listSkillDirectories(root, PLATFORM_SKILL_ROOTS.claud
 console.log(
   [
     "Productization metadata is valid.",
-    `source=${sourceSkills.length}/${CODEX_SKILLS.length}`,
+    `source=${sourceSkills.length}/${SOURCE_SKILLS.length}`,
     `codex=${codexSkills.length}/${CODEX_SKILLS.length}`,
     `claude=${claudeSkills.length}/${CLAUDE_SKILLS.length}`,
   ].join(" "),

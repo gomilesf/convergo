@@ -217,6 +217,18 @@
       "tags": ["negative"],
       "prompt": "Summarize what changed in the last five commits.",
       "expect": null
+    },
+    {
+      "id": "hybrid-plan-loop",
+      "tags": ["positive"],
+      "prompt": "I want a split-model planning loop: fable drafts and revises the plan, codex sessions review it until clean.",
+      "expect": "cvg-hybrid-plan-loop"
+    },
+    {
+      "id": "hybrid-build-loop",
+      "tags": ["positive"],
+      "prompt": "Run the build loop with codex doing the implementation and first review rounds, and fable only as the final exit reviewer.",
+      "expect": "cvg-hybrid-build-loop"
     }
   ]
 }

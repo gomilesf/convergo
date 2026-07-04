@@ -42,8 +42,11 @@ const PLUGIN_NAME = "convergo"
 const EXPECTED_REPOSITORY = "https://github.com/gomilesf/convergo"
 export const BASE_SKILLS = ["cvg-code-review", "cvg-code-review-feedback", "cvg-plan", "cvg-plan-review", "cvg-plan-review-feedback", "cvg-work"].sort()
 export const LOOP_SKILLS = ["cvg-build-loop", "cvg-multi-session", "cvg-plan-loop"].sort()
+// Claude Code only: split-engine loop presets need the Agent tool model parameter.
+export const HYBRID_LOOP_SKILLS = ["cvg-hybrid-build-loop", "cvg-hybrid-plan-loop"].sort()
 export const CODEX_SKILLS = [...BASE_SKILLS, ...LOOP_SKILLS].sort()
-export const CLAUDE_SKILLS = [...BASE_SKILLS, ...LOOP_SKILLS].sort()
+export const CLAUDE_SKILLS = [...BASE_SKILLS, ...LOOP_SKILLS, ...HYBRID_LOOP_SKILLS].sort()
+export const SOURCE_SKILLS = [...new Set([...CODEX_SKILLS, ...CLAUDE_SKILLS])].sort()
 export const PLATFORM_SKILL_ROOTS = {
   source: "skills-src",
   codex: "plugins/codex/skills",
@@ -238,7 +241,7 @@ export async function validateProductization(root = process.cwd()): Promise<Prod
     }
   }
 
-  await validateSkillSurface(root, errors, PLATFORM_SKILL_ROOTS.source, CODEX_SKILLS)
+  await validateSkillSurface(root, errors, PLATFORM_SKILL_ROOTS.source, SOURCE_SKILLS)
   await validateSkillSurface(root, errors, PLATFORM_SKILL_ROOTS.codex, CODEX_SKILLS)
   await validateSkillSurface(root, errors, PLATFORM_SKILL_ROOTS.claude, CLAUDE_SKILLS)
   await validateSkillSurface(root, errors, PLATFORM_SKILL_ROOTS.generic, BASE_SKILLS)

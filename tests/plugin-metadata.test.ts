@@ -6,6 +6,7 @@ import {
   CLAUDE_SKILLS,
   CODEX_SKILLS,
   PLATFORM_SKILL_ROOTS,
+  SOURCE_SKILLS,
   validateProductization,
 } from "../src/metadata"
 import {
@@ -17,7 +18,7 @@ import {
 
 const ROOT = process.cwd()
 const PLUGIN_NAME = "convergo"
-const EXPECTED_VERSION = "0.2.5"
+const EXPECTED_VERSION = "0.3.0"
 const EXPECTED_REPOSITORY = "https://github.com/gomilesf/convergo"
 
 function readJson<T>(relativePath: string): T {
@@ -157,7 +158,7 @@ describe("plugin metadata", () => {
     const skillsPath = path.resolve(ROOT, "plugins/codex", codexPlugin.skills)
 
     expect(statSync(skillsPath).isDirectory()).toBe(true)
-    expect(listSkillDirs(PLATFORM_SKILL_ROOTS.source)).toEqual(CODEX_SKILLS)
+    expect(listSkillDirs(PLATFORM_SKILL_ROOTS.source)).toEqual(SOURCE_SKILLS)
     expect(listSkillDirs(PLATFORM_SKILL_ROOTS.codex)).toEqual(CODEX_SKILLS)
     expect(listSkillDirs(PLATFORM_SKILL_ROOTS.claude)).toEqual(CLAUDE_SKILLS)
     expect(listSkillDirs(PLATFORM_SKILL_ROOTS.generic)).toEqual(BASE_SKILLS)
