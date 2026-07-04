@@ -1,6 +1,6 @@
 {
   "name": "convergo",
-  "version": "0.3.6",
+  "version": "0.3.7",
   "description": "Disciplined software engineering for coding agents: plan, build, and review in bounded loops until an independent fresh reviewer signs off",
   "type": "module",
   "private": true,
@@ -30,7 +30,9 @@
     "validate": "bun run scripts/validate.ts",
     "eval:trigger": "bun run scripts/run-trigger-evals.ts",
     "plugin:validate": "claude plugin validate .claude-plugin/marketplace.json && claude plugin validate plugins/claude",
-    "test": "bun test"
+    "test": "bun test",
+    "eval:sandbox": "bun run evals/wrapper-behavior/sandbox-matrix.ts",
+    "eval:wrapper": "bun run evals/wrapper-behavior/wrapper-compliance.ts"
   },
   "devDependencies": {
     "bun-types": "^1.0.0"

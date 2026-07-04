@@ -1,0 +1,44 @@
+#!/bin/bash
+# Stub codex CLI for Layer A wrapper-compliance scenarios.
+# Records every invocation's argv, then behaves per CODEX_STUB_MODE:
+#   ok                : write the -o file after CODEX_STUB_DELAY seconds, exit 0
+#   exit1-with-output : write the -o file, print a spurious error, exit 1
+#   exit1-empty       : write nothing, print a hard failure, exit 1
+DIR="${CODEX_STUB_DIR:?CODEX_STUB_DIR must be set}"
+printf '%s\n' "$*" >> "$DIR/argv.log"
+
+OUT=""
+prev=""
+for a in "$@"; do
+  [ "$prev" = "-o" ] && OUT="$a"
+  prev="$a"
+done
+
+cat <<EOF
+OpenAI Codex v0.0.0-stub
+--------
+workdir: $PWD
+model: stub
+approval: never
+sandbox: stub [$*]
+session id: 00000000-dead-beef-0000-000000000001
+--------
+EOF
+
+sleep "${CODEX_STUB_DELAY:-5}"
+
+case "${CODEX_STUB_MODE:-ok}" in
+  ok)
+    [ -n "$OUT" ] && printf 'STUB-RELAY-PAYLOAD %s\n' "${CODEX_STUB_TAG:-tag}" > "$OUT"
+    exit 0
+    ;;
+  exit1-with-output)
+    [ -n "$OUT" ] && printf 'STUB-RELAY-PAYLOAD %s\n' "${CODEX_STUB_TAG:-tag}" > "$OUT"
+    echo "spurious shutdown error after successful run" >&2
+    exit 1
+    ;;
+  exit1-empty)
+    echo "hard launch failure: nothing was produced" >&2
+    exit 1
+    ;;
+esac

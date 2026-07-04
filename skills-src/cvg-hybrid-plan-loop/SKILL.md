@@ -71,8 +71,11 @@ background Claude agent:
      foreground Bash timeout), with the final message written to a file and
      the run header captured:
      `codex exec --sandbox workspace-write -C <scratch>
-     -o <scratch>/last-message.txt "<prompt>" > <scratch>/run-header.log
-     2>&1` — the reviewer sandbox is `workspace-write` launched from a
+     --skip-git-repo-check -o <scratch>/last-message.txt "<prompt>"
+     > <scratch>/run-header.log 2>&1 </dev/null` — the
+     `--skip-git-repo-check` is required because codex checks the process
+     working directory, and a scratch directory is not a git repo. The
+     reviewer sandbox is `workspace-write` launched from a
      scratch working directory: reads are unrestricted so the reviewer can
      read the repo, while writes stay OS-confined to scratch and /tmp — the
      repo is outside the writable roots, and the role skill can still write
@@ -108,9 +111,9 @@ relay now — the resumed wrapper reads the `-o` file and finishes.
   resumes the recorded codex session and relays the result verbatim again.
   `codex exec resume` does not accept `--sandbox`; re-pin the sandbox as a
   config override on every resume, for example
-  `codex exec resume <session-id> -c sandbox_mode="workspace-write"
-  "<follow-up>"` (the session keeps its scratch working directory, so the
-  repo stays unwritable). A resume without the override re-resolves the
+  `codex exec resume <session-id> --skip-git-repo-check
+  -c sandbox_mode="workspace-write" "<follow-up>"` (the session keeps its
+  scratch working directory, so the repo stays unwritable). A resume without the override re-resolves the
   sandbox from the user's codex config and can silently escalate the
   reviewer to full access.
 - The wrapper must not read the repo, run other commands, review, summarize,
