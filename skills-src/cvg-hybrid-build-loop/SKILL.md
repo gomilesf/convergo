@@ -137,6 +137,13 @@ relay now — the resumed wrapper reads the `-o` file and finishes.
   the initial run, `-c 'sandbox_workspace_write.writable_roots=[...]'` on
   resumes. Never escalate to `danger-full-access` to get past a write
   denial.
+- A worker in a linked `git worktree` cannot commit without one extra
+  writable root: the worktree's git metadata (index, HEAD) and the shared
+  object store live under the main repository's `.git` directory, so
+  `git commit` fails with `index.lock ... Operation not permitted`. Always
+  grant the worker the git common dir —
+  `--add-dir "$(git -C <worktree> rev-parse --git-common-dir)"` on the
+  initial run, the same path in `writable_roots` on resumes.
 
 ## Why the Exit Is Tiered
 
