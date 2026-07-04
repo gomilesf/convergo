@@ -69,6 +69,22 @@ callback templates, and round cap — with these routing overrides:
    tier.
 6. **QA (Phase 6):** execution tier.
 
+## Cross-Repo Plans
+
+One loop drives one worker in one repo. A plan whose slices or invariant
+matrix span multiple repos is NOT completed by one loop. When Phase 0 finds
+more than one repo in scope:
+
+- declare the repo split and build order to the user before spawning the
+  worker (the contract-source repo usually goes first), including which
+  slices are runnable in parallel rather than blocked;
+- scope this loop and its reviewer prompts to that one repo's slices;
+- after this loop exits, the remaining repos' slices are open work — launch
+  the next repo's loop or hand the sequencing decision to the user;
+- never present a single-repo exit as plan completion: the completion
+  summary must list every repo the plan names that this loop did not cover
+  as blocking known gaps.
+
 ## Codex-Backed Specialist Pattern
 
 A codex-backed specialist satisfies the real-specialist gate (real,

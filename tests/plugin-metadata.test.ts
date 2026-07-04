@@ -18,7 +18,7 @@ import {
 
 const ROOT = process.cwd()
 const PLUGIN_NAME = "convergo"
-const EXPECTED_VERSION = "0.3.7"
+const EXPECTED_VERSION = "0.3.8"
 const EXPECTED_REPOSITORY = "https://github.com/gomilesf/convergo"
 
 function readJson<T>(relativePath: string): T {
