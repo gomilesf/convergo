@@ -89,19 +89,22 @@ background Claude agent:
 - The wrapper agent id from the `Agent` tool result is the specialist id.
   Record the codex session id beside it for continuation.
 - Continue the specialist with `SendMessage` to the same wrapper; the wrapper
-  resumes the recorded codex session **with the same sandbox flag this role
-  used initially** (for example `codex exec resume <session-id>
-  --sandbox workspace-write "<follow-up>"` for the worker) and relays the
-  result verbatim again. Sandbox is per invocation; a resume without the
-  flag falls back to read-only and a worker repair round cannot write.
+  resumes the recorded codex session and relays the result verbatim again.
+  `codex exec resume` does not accept `--sandbox`; re-pin the role's sandbox
+  as a config override on every resume, for example
+  `codex exec resume <session-id> -c sandbox_mode="workspace-write"
+  "<follow-up>"` for the worker. A resume without the override re-resolves
+  the sandbox from the user's codex config, which can silently escalate a
+  read-only reviewer to full access or leave the worker unable to write.
 - The wrapper must not read the repo, run other commands, review, summarize,
   or filter codex output. Relay fidelity is its whole job.
 - `workspace-write` covers the directory codex is launched from. If the task
   legitimately needs writes outside that worktree (for example a second
   repo), the orchestrator must name those extra paths in the specialist
-  prompt and the wrapper extends the sandbox for exactly those paths with
-  `-c 'sandbox_workspace_write.writable_roots=[...]'`. Never escalate to
-  `danger-full-access` to get past a write denial.
+  prompt and the wrapper allows exactly those paths — `--add-dir <path>` on
+  the initial run, `-c 'sandbox_workspace_write.writable_roots=[...]'` on
+  resumes. Never escalate to `danger-full-access` to get past a write
+  denial.
 
 ## Why the Exit Is Tiered
 

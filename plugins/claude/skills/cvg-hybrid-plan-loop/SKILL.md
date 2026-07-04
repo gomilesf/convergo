@@ -72,9 +72,12 @@ background Claude agent:
 - The wrapper agent id from the `Agent` tool result is the specialist id.
   Record the codex session id beside it for continuation.
 - Continue the specialist with `SendMessage` to the same wrapper; the wrapper
-  resumes the recorded codex session with the same sandbox flag it used
-  initially (for example `codex exec resume <session-id> --sandbox read-only
-  "<follow-up>"`) and relays the result verbatim again. Sandbox is per
-  invocation, not per session.
+  resumes the recorded codex session and relays the result verbatim again.
+  `codex exec resume` does not accept `--sandbox`; re-pin the sandbox as a
+  config override on every resume, for example
+  `codex exec resume <session-id> -c sandbox_mode="read-only" "<follow-up>"`.
+  A resume without the override re-resolves the sandbox from the user's
+  codex config and can silently escalate a read-only reviewer to full
+  access.
 - The wrapper must not read the repo, run other commands, review, summarize,
   or filter codex output. Relay fidelity is its whole job.
