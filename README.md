@@ -21,7 +21,8 @@ fix them, review again. The dirty secret is that this loop often **doesn't
 converge** — each round adds patches, prose, and pseudo-code instead of
 closing in on done. Convergo is a plugin that bounds that loop by
 construction. **It exits only when a fresh reviewer — a newly spawned session
-that has never seen the code — completes a full pass and reports no blockers.
+that reads the diff cold, with no memory of earlier rounds — completes a full
+pass and reports no blockers.
 After three rounds without one, it stops and escalates to you instead of
 churning.**
 
