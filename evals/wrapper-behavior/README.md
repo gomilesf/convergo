@@ -51,6 +51,24 @@ The wrapper prompt template in `wrapper-compliance.ts` mirrors the
 Codex-Backed Specialist Pattern section of the two hybrid SKILL.md files —
 keep them in sync when the pattern changes.
 
+## Layer C: orchestrator scoping (`bun run eval:scoping`)
+
+Feeds the shipped `cvg-hybrid-build-loop` text plus a fixture three-repo
+plan to a real agent playing the orchestrator, with deliberately NEUTRAL
+prompts (the production failure was not-declaring the split unprompted, so
+the scenario must not ask for it). Asserts a content-level floor: the
+Phase 0 message names the uncovered repos; a single-repo completion
+summary names them and reports `plan_complete: false`.
+
+`--ablate` removes the Cross-Repo Plans section. Honest finding from the
+first runs: at this fixture size, sonnet largely produces the scoping
+behavior even ablated — the differential did not reproduce at eval scale
+(the motivating incident happened under full production context pressure).
+Treat Layer C as a regression floor for the shipped text, not proof the
+section is load-bearing. Two grader lessons are baked in: don't assert
+phrasing (two false negatives, one because the agent answered in Chinese),
+assert content.
+
 ## Baseline results (2026-07-04, codex-cli 0.142.3, sonnet wrapper)
 
 - Layer B: 10/10. Canary: an unoverridden resume on this machine resolved
