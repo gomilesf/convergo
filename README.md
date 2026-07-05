@@ -159,6 +159,13 @@ loop and escalates to you with all open findings. Findings already
 adjudicated invalid cannot re-block a later round without new evidence (the
 adjudication ratchet). Bounded convergence is a rule, not a hope.
 
+**One loop covers one repo.** The loop's base/head and diff bookkeeping
+spans a single repo, so changes outside it would escape review. When a
+plan's slices span multiple repos, the orchestrator declares the repo split
+up front, runs one loop per repo, and reports every uncovered repo as a
+blocking known gap — a single-repo exit is never presented as plan
+completion.
+
 **Plans are right-sized decision artifacts.** `/cvg-plan` classifies
 complexity first (brief / standard / full); only cross-cutting work gets the
 full surfaces + invariant-matrix treatment. Plans never contain code. Open
@@ -211,7 +218,11 @@ routing: `/cvg-hybrid-plan-loop` (a high-taste Claude design model plans,
 Codex CLI sessions review) and `/cvg-hybrid-build-loop` (Codex implements
 and takes every first-pass review round, the design model holds the final
 exit gate — a clean cheap-tier review promotes to a design-tier
-`final-fresh-exit` review instead of ending the loop).
+`final-fresh-exit` review instead of ending the loop). The presets need a
+working, logged-in `codex` CLI with the convergo codex plugin installed on
+that side (codex specialists load role skills by name), plus access to the
+design-tier model; a missing prerequisite stops the loop with a blocker
+instead of silently degrading to one engine.
 
 ## Skills
 
@@ -230,7 +241,7 @@ exit gate — a clean cheap-tier review promotes to a design-tier
 
 One more skill, `cvg-multi-session`, ships alongside these: the shared
 protocol (transport binding, callbacks, waiting, feedback routing, exit
-gates) that the two loop skills bind to. It is internal — you never invoke
+gates) that the loop skills bind to. It is internal — you never invoke
 it directly.
 
 ### Auxiliary Personas
@@ -316,6 +327,9 @@ projected token cost per skill.
 3. Add the marketplace, select **Convergo**, install **convergo**, then
    restart Codex. The install is self-contained; no extra agent setup step.
 
+Codex installs ship the nine base and loop skills; the two hybrid presets
+are Claude Code-only (they need the `Agent` tool's per-role model routing).
+
 ### Codex CLI
 
 ```bash
@@ -389,6 +403,9 @@ bun run validate       # productization metadata checks
 bun test               # metadata + skill convention tests
 bun run plugin:validate
 bun run eval:trigger   # LLM eval: skill descriptions route the right prompts
+bun run eval:sandbox   # codex sandbox ground-truth matrix (hybrid loops)
+bun run eval:wrapper   # wrapper-compliance scenarios + per-rule ablation
+bun run eval:scoping   # orchestrator cross-repo scoping scenarios
 ```
 
 ### Source layout and generated builds
@@ -418,6 +435,17 @@ prompts a distractor must win, and no-skill negatives. Run it after changing
 any skill `description`; add `-- --runs 3` to check stability and
 `EVAL_MODEL=sonnet` to cross-check with a stronger judge. It costs a few LLM
 calls, so it is not part of `bun test`.
+
+### Wrapper-behavior evals
+
+The hybrid loops' codex wrapper pattern is covered by three behavioral eval
+layers under `evals/wrapper-behavior/`: a sandbox ground-truth matrix run
+against the real codex CLI (also the canary for codex upgrades silently
+changing sandbox semantics), wrapper-compliance scenarios against a stub
+codex with per-rule ablation, and orchestrator cross-repo scoping
+scenarios. All are manual, cost-bearing runs — see
+[evals/wrapper-behavior/README.md](evals/wrapper-behavior/README.md) for
+scenarios, baselines, and ablation results.
 
 ### End-to-end smoke test
 
@@ -466,9 +494,9 @@ gemini extensions install "$PWD"
 ```text
 skills-src/        Canonical skill sources (with platform marker blocks)
 plugins/codex/     Codex plugin root: nine Codex-stripped skills
-plugins/claude/    Claude Code plugin root: nine Claude-stripped skills
+plugins/claude/    Claude Code plugin root: eleven Claude-stripped skills (adds the hybrid presets)
 plugins/generic/   Base-only skill root for generic hosts
-evals/             Trigger-routing eval cases (run with bun run eval:trigger)
+evals/             Trigger-routing + wrapper-behavior evals (eval:trigger / eval:sandbox / eval:wrapper / eval:scoping)
 .claude-plugin/    Claude Code marketplace metadata
 .agents/plugins/   Codex custom marketplace descriptor
 .cursor-plugin/    Cursor marketplace metadata
