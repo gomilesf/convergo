@@ -30,6 +30,14 @@ Record:
 
 Pass unrelated dirty state to the worker and tell it not to overwrite those files.
 
+If the plan's slices or invariant matrix span multiple repos, declare the
+repo split and build order to the user before spawning the worker, and scope
+this loop to one repo's slices: the loop's base/head and diff bookkeeping
+covers one repo, so changes outside it escape review entirely. Instruct the
+worker not to modify other repos. Run one loop per repo, and carry every
+repo this loop does not cover into the completion summary as a blocking
+known gap — a single-repo exit is never plan completion.
+
 ## Phase 1: Worker Handoff
 
 Spawn the worker as a real specialist session (Gate 0 spawn operation) and
