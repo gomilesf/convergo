@@ -10,7 +10,7 @@
 [![Skills](https://img.shields.io/badge/skills-11-2b2b28)](#skills)
 [![Platforms](https://img.shields.io/badge/platforms-Claude%20Code%20%C2%B7%20Codex%20%C2%B7%20Cursor%20%C2%B7%20OpenCode%20%C2%B7%20Pi%20%C2%B7%20Gemini-8a7a5c)](#install)
 
-[Quick Start](#quick-start) · [Why](#why-convergo-exists) · [How It Works](#the-rules-that-make-it-converge) · [Skills](#skills) · [Install](#install)
+[Quick Start](#quick-start) · [Why](#why-convergo-exists) · [How It Works](#the-rules-that-make-it-converge) · [Hybrid Loops](#hybrid-loops-fable-plans-codex-builds) · [Skills](#skills) · [Install](#install)
 
 </div>
 
@@ -213,16 +213,58 @@ build ships only its own transport mechanics — the copies under
 Specialist identity always comes from the platform tool result, never from
 the specialist's own prose.
 
-On Claude Code, two preset skills run the same loops with a split-engine
-routing: `/cvg-hybrid-plan-loop` (a high-taste Claude design model plans,
-Codex CLI sessions review) and `/cvg-hybrid-build-loop` (Codex implements
-and takes every first-pass review round, the design model holds the final
-exit gate — a clean cheap-tier review promotes to a design-tier
-`final-fresh-exit` review instead of ending the loop). The presets need a
-working, logged-in `codex` CLI with the convergo codex plugin installed on
-that side (codex specialists load role skills by name), plus access to the
-design-tier model; a missing prerequisite stops the loop with a blocker
-instead of silently degrading to one engine.
+On Claude Code there is a third option: the same loops with a split-engine
+routing — see [Hybrid Loops](#hybrid-loops-fable-plans-codex-builds).
+
+## Hybrid Loops: Fable Plans, Codex Builds
+
+*(Claude Code only.)* The loop protocol doesn't care which model plays which
+role — the two hybrid presets pin a deliberate split that matches today's
+model economics: **Claude Fable** has the best taste and judgment but scarce
+quota; **GPT-5.5 through the Codex CLI at xhigh reasoning effort** is nearly
+as capable at execution and effectively free at typical subscription limits.
+So the presets spend Fable only where judgment has leverage, and let Codex
+burn every iteration. These are defaults, not hardcoded — any invocation can
+override either engine.
+
+| Role | Engine | Why |
+| --- | --- | --- |
+| Planner, plan revisions | Fable | direction-setting is where taste pays most |
+| Plan reviewers | Codex (gpt-5.5 xhigh) | completeness-vs-codebase checking is execution work — and cross-model review exposes blind spots same-model self-review shares |
+| Worker, first-pass code reviews, QA | Codex (gpt-5.5 xhigh) | all the iteration burn lands here |
+| Final `final-fresh-exit` reviewer | Fable | the one gate that decides shipping |
+
+**The exit is tiered because no one knows which review is the last.** In the
+hybrid build loop a clean Codex fresh review never exits — it *promotes*: it
+triggers a Fable fresh review, and only a clean Fable pass ends the loop.
+Fable blockers re-enter the normal feedback cycle (worker fixes, the same
+Fable session re-reviews, the next round starts back at the Codex tier). In
+practice Fable runs once or twice per loop — exactly when the cheap engine
+believes the work is done. This split also keeps the protocol honest: the
+final exit requires real dispatched sub-reviewers, which inline Codex
+sessions cannot provide.
+
+**Codex runs sandboxed, and the sandbox is load-bearing.** Codex specialists
+are `codex exec` sessions behind thin relay wrappers: the worker gets
+`workspace-write` in its worktree (plus the repo's git common dir, so
+per-slice commits work in linked worktrees); reviewers launch from a scratch
+directory so the repo stays OS-level read-only while their `/tmp` findings
+and audit artifacts still land. Every resume re-pins the sandbox — an
+unpinned resume re-resolves from local codex config and can silently
+escalate to full access. These mechanics are encoded in the skills and
+regression-tested by the
+[wrapper-behavior evals](evals/wrapper-behavior/README.md).
+
+**Prerequisites.** A working, logged-in `codex` CLI with the convergo codex
+plugin installed on that side (codex specialists load role skills by name),
+plus Fable access on the Claude side. A missing prerequisite stops the loop
+with a blocker instead of silently degrading to one engine.
+
+```text
+/cvg-hybrid-plan-loop docs/briefs/topic.md
+... review the plan yourself ...
+/cvg-hybrid-build-loop docs/plans/topic-plan.md
+```
 
 ## Skills
 
@@ -236,8 +278,8 @@ instead of silently degrading to one engine.
 | `/cvg-code-review-feedback` | Classify and handle code-review blockers inside the worker session | Claude Code, Codex, generic |
 | `/cvg-plan-loop` | Orchestrate planner -> fresh plan review -> repair -> final fresh review | Claude Code, Codex |
 | `/cvg-build-loop` | Orchestrate worker -> fresh code review -> repair -> final fresh review -> QA gates | Claude Code, Codex |
-| `/cvg-hybrid-plan-loop` | Plan loop preset: a design-tier Claude model plans, Codex CLI sessions review | Claude Code |
-| `/cvg-hybrid-build-loop` | Build loop preset: Codex CLI implements and reviews first, a design-tier Claude model holds the final exit gate | Claude Code |
+| `/cvg-hybrid-plan-loop` | Plan loop preset: Fable plans, Codex (gpt-5.5 xhigh) reviews | Claude Code |
+| `/cvg-hybrid-build-loop` | Build loop preset: Codex implements and reviews first, Fable holds the final exit gate | Claude Code |
 
 One more skill, `cvg-multi-session`, ships alongside these: the shared
 protocol (transport binding, callbacks, waiting, feedback routing, exit
