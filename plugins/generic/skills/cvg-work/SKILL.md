@@ -54,20 +54,22 @@ the task context. Do not silently reinterpret the plan.
 
 ### 2. Implement slice by slice
 
-For each slice, in dependency order:
+Work in dependency order, one slice at a time: complete a slice — behavior,
+tests, and its atomic commit — before starting the next.
 
-1. **Read** the affected files listed in the slice
-2. **Write a failing test** that captures the slice's "done when" criterion
-3. **Run the test** to confirm it fails for the right reason
-4. **Implement** the minimal code to make the test pass
-5. **Run tests** to verify the slice works and nothing is broken
-6. **System-wide check** before moving on (see below)
-7. **Commit** the slice as an atomic change
+The acceptance surface per slice is an outcome contract, not a choreography.
+A slice is done when:
 
-For cross-cutting slices (one invariant across multiple surfaces):
-- Write a test for EACH surface listed in the invariant matrix
-- Implement the invariant enforcement on ALL surfaces before moving to the next slice
-- Check off each cell in the invariant matrix as you go
+- Every "done when" criterion has a test that failed before its
+  implementation existed, and the commit history shows it —
+  test-before-code is evidence the reviewer can check, not ceremony.
+- The slice's tests pass and the suites you touched stay green.
+- For cross-cutting slices (one invariant across multiple surfaces): every
+  surface listed in the invariant matrix has its own failing-first test,
+  and the invariant is enforced on ALL surfaces before the slice is done.
+  Check off each matrix cell as you go.
+- The system-wide check (below) ran before you moved on; skip it only for
+  leaf-node changes.
 
 **Do NOT write all tests first, then all implementation.** That is horizontal
 slicing: it produces tests that verify imagined behavior rather than actual
@@ -191,8 +193,10 @@ contract before implementation continues.
 - **Slice by slice, not file by file.** Complete one slice, including behavior
   across all of its surfaces, before starting the next.
 - **One test -> one implementation -> verify.** Not all tests first.
-- **TDD is not optional.** If you cannot write a test for a slice's "done when,"
-  capture the blocker and route it through the task context.
+- **TDD is not optional; its enforcement point is evidence.** Every "done
+  when" criterion carries a test that failed before the implementation
+  existed, visible in commit history. If a criterion cannot be expressed as
+  a test, capture the blocker and route it through the task context.
 - **Do not refactor beyond the plan.** Stay within the plan's scope boundaries.
 - **Commit per slice.** One atomic commit per slice.
 - **The invariant matrix is your checklist.** Every cell must be checked before
