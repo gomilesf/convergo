@@ -41,7 +41,13 @@ findings, on whichever tier that session lives — unchanged protocol.
 
 Before the first spawn, echo the resolved bindings in one line — worker
 model and effort, reviewer engine, design-tier model, round cap — so a
-binding mistake surfaces before any specialist runs.
+binding mistake surfaces before any specialist runs. Resolve the
+execution-tier model and effort from the user's codex config (read
+`~/.codex/config.toml`, or the `model:` line of a run header) — echo what
+it actually resolves to, never what was assumed. If it resolves below a
+frontier model at high reasoning effort, say so to the user before
+spawning: the tier split's economics assume execution is nearly as capable
+as the design tier.
 
 ## Procedure
 

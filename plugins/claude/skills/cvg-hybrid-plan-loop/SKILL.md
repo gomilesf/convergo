@@ -38,7 +38,12 @@ Defaults; the user's invocation may override either tier.
 
 Before the first spawn, echo the resolved bindings in one line — planner
 model, reviewer engine and model, round cap — so a binding mistake surfaces
-before any specialist runs.
+before any specialist runs. Resolve the execution-tier model and effort
+from the user's codex config (read `~/.codex/config.toml`, or the `model:`
+line of a run header) — echo what it actually resolves to, never what was
+assumed. If it resolves below a frontier model at high reasoning effort,
+say so to the user before spawning: cross-model review only pays if the
+reviewing engine is near-peer.
 
 ## Procedure
 
