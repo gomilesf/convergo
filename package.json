@@ -31,7 +31,6 @@
     "eval:trigger": "bun run scripts/run-trigger-evals.ts",
     "plugin:validate": "claude plugin validate .claude-plugin/marketplace.json && claude plugin validate plugins/claude",
     "test": "bun test",
-    "eval:sandbox": "bun run evals/wrapper-behavior/sandbox-matrix.ts",
     "eval:wrapper": "bun run evals/wrapper-behavior/wrapper-compliance.ts",
     "eval:scoping": "bun run evals/wrapper-behavior/orchestrator-scoping.ts"
   },

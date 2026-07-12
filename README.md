@@ -245,15 +245,15 @@ believes the work is done. This split also keeps the protocol honest: the
 final exit requires real dispatched sub-reviewers, which inline Codex
 sessions cannot provide.
 
-**Codex runs sandboxed, and the sandbox is load-bearing.** Codex specialists
-are `codex exec` sessions behind thin relay wrappers: the worker gets
-`workspace-write` in its worktree (plus the repo's git common dir, so
-per-slice commits work in linked worktrees); reviewers launch from a scratch
-directory so the repo stays OS-level read-only while their `/tmp` findings
-and audit artifacts still land. Every resume re-pins the sandbox — an
-unpinned resume re-resolves from local codex config and can silently
-escalate to full access. These mechanics are encoded in the skills and
-regression-tested by the
+**Codex specialists run with the user's own permissions.** Convergo is a
+developer tool: it passes no sandbox or permission flags and manages no
+permissions. `codex exec` sessions resolve their capabilities from the
+user's codex configuration, exactly as a shell would, and Claude-side
+agents run under the user's Claude Code permission settings. The loop's
+protection is contractual — review gates, git reversibility, and
+phase-gated external side effects — and role boundaries (reviewers do not
+modify the repo) are contract lines in the role skills. The relay-wrapper
+mechanics are regression-tested by the
 [wrapper-behavior evals](evals/wrapper-behavior/README.md).
 
 **Prerequisites.** A working, logged-in `codex` CLI with the convergo codex
@@ -446,7 +446,6 @@ bun run validate       # productization metadata checks
 bun test               # metadata + skill convention tests
 bun run plugin:validate
 bun run eval:trigger   # LLM eval: skill descriptions route the right prompts
-bun run eval:sandbox   # codex sandbox ground-truth matrix (hybrid loops)
 bun run eval:wrapper   # wrapper-compliance scenarios + per-rule ablation
 bun run eval:scoping   # orchestrator cross-repo scoping scenarios
 ```
@@ -481,12 +480,10 @@ calls, so it is not part of `bun test`.
 
 ### Wrapper-behavior evals
 
-The hybrid loops' codex wrapper pattern is covered by three behavioral eval
-layers under `evals/wrapper-behavior/`: a sandbox ground-truth matrix run
-against the real codex CLI (also the canary for codex upgrades silently
-changing sandbox semantics), wrapper-compliance scenarios against a stub
-codex with per-rule ablation, and orchestrator cross-repo scoping
-scenarios. All are manual, cost-bearing runs — see
+The hybrid loops' codex wrapper pattern is covered by two behavioral eval
+layers under `evals/wrapper-behavior/`: wrapper-compliance scenarios against
+a stub codex with per-rule ablation, and orchestrator cross-repo scoping
+scenarios. Both are manual, cost-bearing runs — see
 [evals/wrapper-behavior/README.md](evals/wrapper-behavior/README.md) for
 scenarios, baselines, and ablation results.
 
@@ -539,7 +536,7 @@ skills-src/        Canonical skill sources (with platform marker blocks)
 plugins/codex/     Codex plugin root: nine Codex-stripped skills
 plugins/claude/    Claude Code plugin root: eleven Claude-stripped skills (adds the hybrid presets)
 plugins/generic/   Base-only skill root for generic hosts
-evals/             Trigger-routing + wrapper-behavior evals (eval:trigger / eval:sandbox / eval:wrapper / eval:scoping)
+evals/             Trigger-routing + wrapper-behavior evals (eval:trigger / eval:wrapper / eval:scoping)
 .claude-plugin/    Claude Code marketplace metadata
 .agents/plugins/   Codex custom marketplace descriptor
 .cursor-plugin/    Cursor marketplace metadata

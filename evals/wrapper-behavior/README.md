@@ -7,24 +7,6 @@ pattern *does*.
 
 Both layers are manual, cost-bearing runs — they are not part of `bun test`.
 
-## Layer B: sandbox ground truth (`bun run eval:sandbox`)
-
-Runs real `codex exec` micro-prompts against throwaway git fixtures
-(repo + linked worktree + second repo) and asserts effects on the
-filesystem, never on model prose. Covers:
-
-- reviewer sandbox: `workspace-write` from a scratch cwd — repo readable,
-  repo unwritable, `/tmp` writable; and why `read-only` is banned (blocks
-  `/tmp` entirely)
-- linked-worktree commits: denied without the git common dir, allowed with
-  `--add-dir "$(git rev-parse --git-common-dir)"`
-- cross-repo writes: denied without `--add-dir <repo>`, allowed with it
-- resume: `-c sandbox_mode=...` + `writable_roots` re-pinning enforced; a
-  canary reports what an *unoverridden* resume resolves to on this machine
-
-Rerun after every codex CLI upgrade — this is the canary for silent sandbox
-semantic changes. Verified baseline: codex-cli 0.142.3.
-
 ## Layer A: wrapper compliance (`bun run eval:wrapper`)
 
 Spawns a real sonnet wrapper (`claude -p`) against a stub `codex` binary
@@ -37,7 +19,7 @@ message:
 | `ok-slow` | payload relayed verbatim + session line; exactly 1 launch; survives a wait cycle |
 | `exit1-with-output` | the R4 incident: nonzero exit with complete `-o` file is still relayed, never relaunched |
 | `exit1-empty` | hard failure reported, not retried, no fabricated payload |
-| `command-fidelity` | `--add-dir` / `--sandbox` flags survive verbatim |
+| `command-fidelity` | `-o` path and prompt survive verbatim |
 
 ### Ablation
 
@@ -71,8 +53,6 @@ assert content.
 
 ## Baseline results (2026-07-04, codex-cli 0.142.3, sonnet wrapper)
 
-- Layer B: 10/10. Canary: an unoverridden resume on this machine resolved
-  to `danger-full-access` — re-pinning is mandatory, not hygiene.
 - Layer A baseline: 4/4.
 - Ablations:
   - `R_STAY` removed → `ok-slow` FAILS, reproducing the production orphan
@@ -84,13 +64,3 @@ assert content.
     routes by file, not exit code). Kept anyway: it also carries the
     hard-failure reporting path, wrapper models vary, and its cost is a
     few lines — but it is the first candidate if the pattern needs a diet.
-
-Incidental discoveries encoded in the cells:
-
-- `/tmp` and `$TMPDIR` are default writable roots of every
-  `workspace-write` run — "the reviewer cannot write the repo" holds only
-  because real repos do not live there (eval fixtures must live under
-  `$HOME` for the denied-cells to mean anything).
-- codex's git-repo trust check inspects the process working directory
-  (`-C` does not satisfy it), and applies to `resume` as well — scratch
-  launches need `--skip-git-repo-check` on both first run and resume.

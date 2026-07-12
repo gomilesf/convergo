@@ -19,6 +19,10 @@ normal feedback cycle.
   parameter and `SendMessage` continuation are required.
 - A working `codex` CLI (`codex --version` succeeds) with the convergo codex
   plugin installed, so codex sessions can load role skills by name.
+- Codex sessions run with whatever permissions the user's own codex
+  configuration grants. Convergo passes no sandbox or permission flags;
+  roles assume normal developer access — reading and writing the repo,
+  committing, and running the project's build and test commands.
 
 If either prerequisite fails, stop and report it. Do not silently fall back
 to a single-engine loop; the user chose this skill for the split.
@@ -40,10 +44,10 @@ findings, on whichever tier that session lives — unchanged protocol.
 Apply the `cvg-build-loop` skill in full — same phases, protocol gates,
 callback templates, and round cap — with these routing overrides:
 
-1. **Worker (Phase 1):** codex-backed specialist (pattern below), sandbox
-   `workspace-write`, role skill `cvg-work`.
-2. **Fresh code review (Phase 2):** codex-backed specialist with the
-   reviewer sandbox (see pattern), role skill `cvg-code-review`. Codex
+1. **Worker (Phase 1):** codex-backed specialist (pattern below), role
+   skill `cvg-work`.
+2. **Fresh code review (Phase 2):** codex-backed specialist (pattern
+   below), role skill `cvg-code-review`. Codex
    sessions run through
    `codex exec`, which has no generic subagent primitive, so expect
    auxiliary persona coverage to run inline (the role skill's documented
@@ -100,19 +104,14 @@ background Claude agent:
      exact callback template; nothing else;
   2. launch codex exactly once as a background Bash command
      (`run_in_background: true` — codex runs routinely outlast the single
-     foreground Bash timeout) with the sandbox this role requires, the
-     final message written to a file, and the run header captured:
-     `codex exec --sandbox workspace-write -o <scratch>/last-message.txt
-     "<prompt>" > <scratch>/run-header.log 2>&1` for the worker, launched
-     from the worktree. Reviewers also use `--sandbox workspace-write` but
-     launched from a scratch working directory (`-C <scratch>
-     --skip-git-repo-check` — codex checks the process working directory
-     for a git repo, and scratch is not one): reads are
-     unrestricted so the reviewer can read the repo, while writes stay
-     OS-confined to scratch and /tmp — the repo is outside the writable
-     roots, and the role skill can still write its /tmp/convergo findings
-     and audit artifacts. Never use `--sandbox read-only` for reviewers: it
-     blocks /tmp writes, so review artifacts cannot be written at all;
+     foreground Bash timeout) from the worktree named in the specialist
+     prompt, workers and reviewers alike, with the final message written
+     to a file and the run header captured:
+     `codex exec -o <scratch>/last-message.txt "<prompt>"
+     > <scratch>/run-header.log 2>&1`. Convergo passes no sandbox or
+     permission flags: the session runs with whatever the user's codex
+     configuration grants, and role boundaries (a reviewer does not modify
+     the repo) are contract lines in the role skills;
   3. stay in-turn and wait with repeated bounded foreground wait commands,
      rerun until the file lands:
      `for i in $(seq 1 100); do [ -s <scratch>/last-message.txt ] && { echo
@@ -139,29 +138,11 @@ relay now — the resumed wrapper reads the `-o` file and finishes.
 - The wrapper agent id from the `Agent` tool result is the specialist id.
   Record the codex session id beside it for continuation.
 - Continue the specialist with `SendMessage` to the same wrapper; the wrapper
-  resumes the recorded codex session and relays the result verbatim again.
-  `codex exec resume` does not accept `--sandbox`; re-pin the role's sandbox
-  as a config override on every resume, for example
-  `codex exec resume <session-id> --skip-git-repo-check
-  -c sandbox_mode="workspace-write" "<follow-up>"` for the worker. A resume without the override re-resolves
-  the sandbox from the user's codex config, which can silently escalate the
-  reviewer to full access or leave the worker unable to write.
+  resumes the recorded codex session with
+  `codex exec resume <session-id> "<follow-up>"` and relays the result
+  verbatim again.
 - The wrapper must not read the repo, run other commands, review, summarize,
   or filter codex output. Relay fidelity is its whole job.
-- `workspace-write` covers the directory codex is launched from. If the task
-  legitimately needs writes outside that worktree (for example a second
-  repo), the orchestrator must name those extra paths in the specialist
-  prompt and the wrapper allows exactly those paths — `--add-dir <path>` on
-  the initial run, `-c 'sandbox_workspace_write.writable_roots=[...]'` on
-  resumes. Never escalate to `danger-full-access` to get past a write
-  denial.
-- A worker in a linked `git worktree` cannot commit without one extra
-  writable root: the worktree's git metadata (index, HEAD) and the shared
-  object store live under the main repository's `.git` directory, so
-  `git commit` fails with `index.lock ... Operation not permitted`. Always
-  grant the worker the git common dir —
-  `--add-dir "$(git -C <worktree> rev-parse --git-common-dir)"` on the
-  initial run, the same path in `writable_roots` on resumes.
 
 ## Why the Exit Is Tiered
 

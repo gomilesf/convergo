@@ -40,7 +40,7 @@ function wrapperPrompt(work: string, rules: Set<string>): string {
   const header = `${work}/run-header.log`
   const parts = [
     `You are a thin relay wrapper around a Codex CLI session. Relay fidelity is your whole job: do not read any repository, review, summarize, or filter codex output.`,
-    `1. Launch codex exactly once as a background Bash command (run_in_background: true):\ncodex exec --sandbox workspace-write --add-dir ${work}/extra -o ${o} "Do the assigned task." > ${header} 2>&1 </dev/null\nRun it verbatim — do not drop, reorder, or "simplify" any flag.`,
+    `1. Launch codex exactly once as a background Bash command (run_in_background: true):\ncodex exec -o ${o} "Do the assigned task." > ${header} 2>&1 </dev/null\nRun it verbatim — do not drop, reorder, or "simplify" any flag.`,
   ]
   if (!rules.has("R_STAY")) parts.push(
     `2. Stay in-turn and wait with repeated bounded foreground wait commands, rerun until the file lands:\nfor i in $(seq 1 100); do [ -s ${o} ] && { echo READY; exit 0; }; sleep 5; done; echo NOT-YET\nDo NOT end your turn to wait for a wake-up: a stopped background agent is not re-invoked when its background command exits. Do not hand the run to any separate task queue.`,
@@ -99,12 +99,12 @@ const scenarios: Scenario[] = [
     },
   },
   {
-    name: "command-fidelity", // flags must survive verbatim (cross-repo --add-dir)
+    name: "command-fidelity", // flags must survive verbatim (-o path + prompt)
     env: { CODEX_STUB_MODE: "ok", CODEX_STUB_DELAY: "3", CODEX_STUB_TAG: "FIDELITY" },
     check: (_msg, work) => {
       const argv = readFileSync(path.join(work, "state", "argv.log"), "utf8")
-      if (!argv.includes("--add-dir")) return "--add-dir dropped from the command"
-      if (!argv.includes("--sandbox workspace-write")) return "sandbox flag dropped"
+      if (!argv.includes(`-o ${work}/last-message.txt`)) return "-o flag dropped from the command"
+      if (!argv.includes("Do the assigned task.")) return "prompt not passed verbatim"
       return null
     },
   },
@@ -116,7 +116,7 @@ for (const s of scenarios) {
   const work = mkdtempSync(path.join(tmpdir(), `cvg-wrapper-${s.name}-`))
   const state = path.join(work, "state")
   const bin = path.join(work, "bin")
-  mkdirSync(state); mkdirSync(bin); mkdirSync(path.join(work, "extra"))
+  mkdirSync(state); mkdirSync(bin)
   // stage the stub as `codex` at the front of PATH
   const stub = readFileSync(path.join(STUB_DIR_SRC, "codex"))
   const stubPath = path.join(bin, "codex")

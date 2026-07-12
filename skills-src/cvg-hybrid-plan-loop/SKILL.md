@@ -19,6 +19,10 @@ reviewing the plan exposes blind spots same-model self-review tends to share.
   parameter and `SendMessage` continuation are required.
 - A working `codex` CLI (`codex --version` succeeds) with the convergo codex
   plugin installed, so codex sessions can load role skills by name.
+- Codex sessions run with whatever permissions the user's own codex
+  configuration grants. Convergo passes no sandbox or permission flags;
+  roles assume normal developer access — reading the repo and writing
+  their /tmp/convergo findings and audit artifacts.
 
 If either prerequisite fails, stop and report it. Do not silently fall back
 to a single-engine loop; the user chose this skill for the split.
@@ -40,8 +44,8 @@ callback templates, and exit condition — with these routing overrides:
 1. **Planner (Phase 1):** spawn as a native background specialist with the
    design-tier model. Everything else about the planner prompt is unchanged.
 2. **Fresh plan reviewers (Phase 2 and every later fresh review):** spawn as
-   codex-backed specialists (pattern below) with the reviewer sandbox and
-   role skill `cvg-plan-review`.
+   codex-backed specialists (pattern below) with role skill
+   `cvg-plan-review`.
 3. **Plan review feedback:** unchanged — blockers return to the same
    design-tier planner session with `cvg-plan-review-feedback`.
 4. **Exit:** unchanged — a fresh execution-tier reviewer reporting no
@@ -68,20 +72,13 @@ background Claude agent:
      exact callback template; nothing else;
   2. launch codex exactly once as a background Bash command
      (`run_in_background: true` — codex runs routinely outlast the single
-     foreground Bash timeout), with the final message written to a file and
-     the run header captured:
-     `codex exec --sandbox workspace-write -C <scratch>
-     --skip-git-repo-check -o <scratch>/last-message.txt "<prompt>"
-     > <scratch>/run-header.log 2>&1 </dev/null` — the
-     `--skip-git-repo-check` is required because codex checks the process
-     working directory, and a scratch directory is not a git repo. The
-     reviewer sandbox is `workspace-write` launched from a
-     scratch working directory: reads are unrestricted so the reviewer can
-     read the repo, while writes stay OS-confined to scratch and /tmp — the
-     repo is outside the writable roots, and the role skill can still write
-     its /tmp/convergo findings and audit artifacts. Never use
-     `--sandbox read-only`: it blocks /tmp writes, so review artifacts
-     cannot be written at all;
+     foreground Bash timeout) from the repo named in the specialist prompt,
+     with the final message written to a file and the run header captured:
+     `codex exec -o <scratch>/last-message.txt "<prompt>"
+     > <scratch>/run-header.log 2>&1 </dev/null`. Convergo passes no
+     sandbox or permission flags: the session runs with whatever the
+     user's codex configuration grants, and the reviewer's read-only
+     conduct is a contract line in its role skill;
   3. stay in-turn and wait with repeated bounded foreground wait commands,
      rerun until the file lands:
      `for i in $(seq 1 100); do [ -s <scratch>/last-message.txt ] && { echo
@@ -108,13 +105,8 @@ relay now — the resumed wrapper reads the `-o` file and finishes.
 - The wrapper agent id from the `Agent` tool result is the specialist id.
   Record the codex session id beside it for continuation.
 - Continue the specialist with `SendMessage` to the same wrapper; the wrapper
-  resumes the recorded codex session and relays the result verbatim again.
-  `codex exec resume` does not accept `--sandbox`; re-pin the sandbox as a
-  config override on every resume, for example
-  `codex exec resume <session-id> --skip-git-repo-check
-  -c sandbox_mode="workspace-write" "<follow-up>"` (the session keeps its
-  scratch working directory, so the repo stays unwritable). A resume without the override re-resolves the
-  sandbox from the user's codex config and can silently escalate the
-  reviewer to full access.
+  resumes the recorded codex session with
+  `codex exec resume <session-id> "<follow-up>"` and relays the result
+  verbatim again.
 - The wrapper must not read the repo, run other commands, review, summarize,
   or filter codex output. Relay fidelity is its whole job.
