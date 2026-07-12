@@ -111,7 +111,9 @@ allocation-heavy code):**
 
 Beyond the two always-on lenses, select by the diff's actual risk surface —
 size is not a signal. Record the rationale, including lenses considered and
-omitted, as `selection_rationale` beside the coverage entries.
+omitted, as the top-level `selection_rationale` field of `review.json` —
+never inside the auxiliary coverage object, which stays keyed by reviewer
+name because literal checkers iterate its entries.
 
 For each selected reviewer:
 
@@ -150,7 +152,6 @@ the record.
 
 ```json
 {
-  "selection_rationale": "<why these lenses fit this diff, and what was considered but omitted>",
   "security-reviewer": {
     "status": "dispatched | inline | skipped | failed",
     "agent_id": "<platform child id: spawn, session, or thread id, or null>",
@@ -246,6 +247,7 @@ Before responding, write a single audit artifact
   "verdict": "<Ready to merge | Ready with fixes | Not ready>",
   "completed_at": "<ISO 8601 UTC timestamp>",
   "auxiliary_coverage": "<object-form coverage from step 3>",
+  "selection_rationale": "<why these lenses fit this diff, and what was considered but omitted>",
   "findings": "<merged findings>"
 }
 ```

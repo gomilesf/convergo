@@ -60,9 +60,10 @@ tests, and its atomic commit — before starting the next.
 The acceptance surface per slice is an outcome contract, not a choreography.
 A slice is done when:
 
-- Every "done when" criterion has a test that failed before its
-  implementation existed, and the commit history shows it —
-  test-before-code is evidence the reviewer can check, not ceremony.
+- Every "done when" criterion has a test that fails when run against the
+  slice's parent commit — the reviewer can verify by applying the slice's
+  test files onto the parent and running them. Failing-first is evidence
+  the reviewer can check, not ceremony.
 - The slice's tests pass and the suites you touched stay green.
 - For cross-cutting slices (one invariant across multiple surfaces): every
   surface listed in the invariant matrix has its own failing-first test,
@@ -194,8 +195,8 @@ contract before implementation continues.
   across all of its surfaces, before starting the next.
 - **One test -> one implementation -> verify.** Not all tests first.
 - **TDD is not optional; its enforcement point is evidence.** Every "done
-  when" criterion carries a test that failed before the implementation
-  existed, visible in commit history. If a criterion cannot be expressed as
+  when" criterion carries a test that fails against the slice's parent
+  commit. If a criterion cannot be expressed as
   a test, capture the blocker and route it through the task context.
 - **Do not refactor beyond the plan.** Stay within the plan's scope boundaries.
 - **Commit per slice.** One atomic commit per slice.
