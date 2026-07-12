@@ -123,8 +123,11 @@ background Claude agent:
      to a file and the run header captured:
      `codex exec -m <execution-model> -c model_reasoning_effort="<effort>"
      -o <scratch>/last-message.txt "<prompt>"
-     > <scratch>/run-header.log 2>&1` (binding values from Engine
-     Bindings, or the user's override). `<scratch>` is a per-specialist
+     > <scratch>/run-header.log 2>&1 </dev/null &
+     echo $! > <scratch>/codex.pid; wait "$(cat <scratch>/codex.pid)"`
+     (binding values from Engine
+     Bindings, or the user's override; the pid file is what the
+     orchestrator's watcher probes for liveness). `<scratch>` is a per-specialist
      directory the orchestrator names in the specialist prompt, under the
      loop's `/tmp/convergo/<loop-slug>/` tree. Convergo passes no sandbox or
      permission flags: the session runs with whatever the user's codex
@@ -155,12 +158,14 @@ The orchestrator waits, not the wrapper. On the ARMED callback, arm a
 background watcher on the named output file (`run_in_background: true`):
 
 `for i in $(seq 1 1440); do [ -s <scratch>/last-message.txt ] && { echo
-DONE; exit 0; }; pgrep -f "[c]odex.*<scratch>" >/dev/null || { echo DIED;
-exit 0; }; sleep 5; done; echo TIMEOUT`
+DONE; exit 0; }; p=$(cat <scratch>/codex.pid 2>/dev/null); [ -n "$p" ] &&
+kill -0 "$p" 2>/dev/null || { echo DIED; exit 0; }; sleep 5; done; echo
+TIMEOUT`
 
-(The `[c]` character class keeps the watcher's own command line from
-matching itself — a bare `<scratch>` pattern can self-match and make the
-DIED branch unreachable, degrading codex death to the two-hour timeout.)
+(Liveness is probed through the pid file, never by matching command lines:
+host hooks inject text into every shell's argv, which makes pgrep-style
+patterns self-match or miss unpredictably — verified live. `kill -0` on
+the recorded pid is argv-independent.)
 
 Its completion wakes the orchestrator. On DONE or DIED, `SendMessage` the
 wrapper to relay now; the wrapper applies the source-of-truth rule above.
@@ -178,7 +183,8 @@ immediately instead of ARMED. A relay-shaped first callback — payload plus
   launches
   `codex exec resume <session-id> -c model="<execution-model>"
   -c model_reasoning_effort="<effort>" -o <scratch>/last-message-<round>.txt
-  "<follow-up>" > <scratch>/run-header-<round>.log 2>&1 </dev/null`
+  "<follow-up>" > <scratch>/run-header-<round>.log 2>&1 </dev/null &
+  echo $! > <scratch>/codex.pid; wait "$(cat <scratch>/codex.pid)"`
   as a background Bash command and ends its turn ARMED again with the new
   paths; the orchestrator arms a fresh watcher on the new output file. The
   `-c` re-pin is load-bearing: `resume` does not accept

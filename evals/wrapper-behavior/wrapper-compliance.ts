@@ -45,7 +45,7 @@ function wrapperPrompt(work: string, rules: Set<string>): string {
   const header = `${work}/run-header.log`
   const parts = [
     `You are a thin launcher/relay wrapper around a Codex CLI session. Do not read any repository, review, summarize, or filter codex output.`,
-    `1. Launch codex exactly once as a background Bash command (run_in_background: true):\ncodex exec -m gpt-5.6-sol -c model_reasoning_effort="high" -o ${o} "Do the assigned task." > ${header} 2>&1 </dev/null\nRun it verbatim — do not drop, reorder, or "simplify" any flag.`,
+    `1. Launch codex exactly once as a background Bash command (run_in_background: true):\ncodex exec -m gpt-5.6-sol -c model_reasoning_effort="high" -o ${o} "Do the assigned task." > ${header} 2>&1 </dev/null & echo $! > ${work}/codex.pid; wait "$(cat ${work}/codex.pid)"\nRun it verbatim — do not drop, reorder, or "simplify" any flag.`,
   ]
   if (!rules.has("R_ARM")) parts.push(
     `2. End your turn immediately after launching. Your message must be exactly:\nARMED. Codex running. Output: ${o}. Header: ${header}.\nDo not wait for codex, do not sleep, do not poll — the orchestrator watches the output file and will message you when it is time to relay. Fast path: only if codex has ALREADY completed within this same turn, relay per rule 5 instead of ARMED.`,
@@ -131,6 +131,7 @@ const scenarios: Scenario[] = [
       if (!argv.includes("model_reasoning_effort=high")) return "effort override dropped from the command"
       if (!argv.includes(`-o ${work}/last-message.txt`)) return "-o flag dropped from the command"
       if (!argv.includes("Do the assigned task.")) return "prompt not passed verbatim"
+      if (!existsSync(path.join(work, "codex.pid"))) return "codex.pid not written — the watcher's liveness probe has nothing to read"
       return null
     },
   },

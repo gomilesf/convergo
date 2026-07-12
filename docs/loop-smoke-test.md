@@ -80,8 +80,8 @@ resume rule). Pass: ARMED callback naming the output and header paths; the
 codex process survives the wrapper stopping.
 
 **Leg 2 — watcher wake.** Arm the skill's verbatim watcher (background
-Bash, `[c]odex.*<scratch>` pattern). Pass: watcher exits `DONE` when the
-`-o` file lands and its completion wakes the orchestrator.
+Bash, `kill -0` on `<scratch>/codex.pid`). Pass: watcher exits `DONE` when
+the `-o` file lands and its completion wakes the orchestrator.
 
 **Leg 3 — relay.** `SendMessage` the wrapper "Relay now." Pass: the `-o`
 content relayed verbatim plus a `Codex session: <id>` line.
@@ -93,5 +93,19 @@ pinned model AND effort (the re-pin holding on resume is the load-bearing
 assertion — an unpinned resume silently reverts to config defaults); the
 round-2 relay returns the payload with the SAME session id.
 
-Overall pass: all four legs, one codex launch per round, no wrapper nudges
-needed outside the two designed relay requests.
+**Leg 5 — DIED path.** Launch a long codex task through a fresh wrapper,
+arm the watcher, then kill codex precisely via the pid file
+(`kill "$(cat <scratch>/codex.pid)"`). Pass: the watcher exits `DIED`
+within one poll interval and wakes the orchestrator; the relay request
+returns `FAILURE` plus the run-header tail — no fabricated payload, no
+relaunch. First verified 2026-07-12: kill at :04, DIED verdict delivered
+by :19.
+
+Liveness is probed through the pid file, never by matching command lines:
+host hooks inject text (for example companion-plugin env exports
+containing the string "codex") into every shell's argv, which makes
+pgrep-style patterns self-match or miss unpredictably — this exact
+failure was hit live before the pid-file design replaced the pattern.
+
+Overall pass: all five legs, one codex launch per round, no wrapper nudges
+needed outside the designed relay requests.
