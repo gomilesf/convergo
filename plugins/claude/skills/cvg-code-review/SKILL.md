@@ -174,7 +174,8 @@ Also include this output contract verbatim:
 ```text
 Use only the review prompt, plan, diff, and repository files you read for this
 review. Do not consult project memory, prior sessions, rollout summaries, or
-external history.
+external history. The repository's own git history (log, blame, commit
+messages) is repo evidence, not external history.
 
 Audit artifact: /tmp/convergo/cvg-code-review/<run-id>/<reviewer-name>.json
 Before returning, write the exact JSON object you will return to that artifact

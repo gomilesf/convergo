@@ -122,8 +122,12 @@ The orchestrator waits, not the wrapper. On the ARMED callback, arm a
 background watcher on the named output file (`run_in_background: true`):
 
 `for i in $(seq 1 1440); do [ -s <scratch>/last-message.txt ] && { echo
-DONE; exit 0; }; pgrep -f "<scratch>" >/dev/null || { echo DIED; exit 0;
-}; sleep 5; done; echo TIMEOUT`
+DONE; exit 0; }; pgrep -f "[c]odex.*<scratch>" >/dev/null || { echo DIED;
+exit 0; }; sleep 5; done; echo TIMEOUT`
+
+(The `[c]` character class keeps the watcher's own command line from
+matching itself — a bare `<scratch>` pattern can self-match and make the
+DIED branch unreachable, degrading codex death to the two-hour timeout.)
 
 Its completion wakes the orchestrator. On DONE or DIED, `SendMessage` the
 wrapper to relay now; the wrapper applies the source-of-truth rule above.
