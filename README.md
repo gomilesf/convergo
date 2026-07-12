@@ -222,7 +222,7 @@ routing — see [Hybrid Loops](#hybrid-loops-fable-plans-codex-builds).
 *(Claude Code only.)* The loop protocol doesn't care which model plays which
 role — the two hybrid presets pin a deliberate split that matches today's
 model economics: **Claude Fable** has the best taste and judgment but scarce
-quota; **GPT-5.5 through the Codex CLI at xhigh reasoning effort** is nearly
+quota; **GPT-5.6 Sol through the Codex CLI at high reasoning effort** is nearly
 as capable at execution and effectively free at typical subscription limits.
 So the presets spend Fable only where judgment has leverage, and let Codex
 burn every iteration. These are defaults, not hardcoded — any invocation can
@@ -231,8 +231,8 @@ override either engine.
 | Role | Engine | Why |
 | --- | --- | --- |
 | Planner, plan revisions | Fable | direction-setting is where taste pays most |
-| Plan reviewers | Codex (gpt-5.5 xhigh) | completeness-vs-codebase checking is execution work — and cross-model review exposes blind spots same-model self-review shares |
-| Worker, first-pass code reviews, QA | Codex (gpt-5.5 xhigh) | all the iteration burn lands here |
+| Plan reviewers | Codex (gpt-5.6-sol high) | completeness-vs-codebase checking is execution work — and cross-model review exposes blind spots same-model self-review shares |
+| Worker, first-pass code reviews, QA | Codex (gpt-5.6-sol high) | all the iteration burn lands here |
 | Final `final-fresh-exit` reviewer | Fable | the one gate that decides shipping |
 
 **The exit is tiered because no one knows which review is the last.** In the
@@ -279,7 +279,7 @@ with a blocker instead of silently degrading to one engine.
 | `/cvg-code-review-feedback` | Classify and handle code-review blockers inside the worker session | Claude Code, Codex, generic |
 | `/cvg-plan-loop` | Orchestrate planner -> fresh plan review -> repair -> final fresh review | Claude Code, Codex |
 | `/cvg-build-loop` | Orchestrate worker -> fresh code review -> repair -> final fresh review -> QA gates | Claude Code, Codex |
-| `/cvg-hybrid-plan-loop` | Plan loop preset: Fable plans, Codex (gpt-5.5 xhigh) reviews | Claude Code |
+| `/cvg-hybrid-plan-loop` | Plan loop preset: Fable plans, Codex (gpt-5.6-sol high) reviews | Claude Code |
 | `/cvg-hybrid-build-loop` | Build loop preset: Codex implements and reviews first, Fable holds the final exit gate | Claude Code |
 
 One more skill, `cvg-multi-session`, ships alongside these: the shared
