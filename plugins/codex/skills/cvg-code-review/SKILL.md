@@ -95,16 +95,23 @@ reviewer is a skill-local persona under `references/personas/`.
 - `security-reviewer` - "Review for security vulnerabilities. Intent:
   <intent>. Plan: <path>. Base: <base ref>."
 
-**When diff is large (>=50 changed lines) or touches auth, payments, data
-mutations, or external APIs:**
+**When the diff's failure or abuse consequences are severe — auth, payments,
+data mutations, external APIs, or wherever your risk read says emergent
+misuse is plausible:**
 
 - `adversarial-reviewer` - "Review for failure scenarios and abuse cases.
   Intent: <intent>. Plan: <path>. Base: <base ref>."
 
-**When diff touches error handling, retries, timeouts, or background jobs:**
+**When diff touches error handling, retries, timeouts, background jobs, or
+performance-sensitive paths (hot queries, loops over unbounded data,
+allocation-heavy code):**
 
 - `reliability-reviewer` - "Review for production reliability issues.
   Intent: <intent>. Plan: <path>. Base: <base ref>."
+
+Beyond the two always-on lenses, select by the diff's actual risk surface —
+size is not a signal. Record the rationale, including lenses considered and
+omitted, as `selection_rationale` beside the coverage entries.
 
 For each selected reviewer:
 
@@ -143,6 +150,7 @@ the record.
 
 ```json
 {
+  "selection_rationale": "<why these lenses fit this diff, and what was considered but omitted>",
   "security-reviewer": {
     "status": "dispatched | inline | skipped | failed",
     "agent_id": "<platform child id: spawn, session, or thread id, or null>",
@@ -169,8 +177,12 @@ external history.
 
 Audit artifact: /tmp/convergo/cvg-code-review/<run-id>/<reviewer-name>.json
 Before returning, write the exact JSON object you will return to that artifact
-path. This is the only write operation you may perform. If the write fails,
-still return the JSON and include no extra prose.
+path. You may run the project's read-only checks and targeted tests to confirm
+a finding — prefer targeted tests over full suites; several reviewers share
+this worktree in parallel. Do not edit repository files, change branches,
+commit, push, or create artifacts outside your run directory beyond the
+transient outputs those checks produce. If the artifact write fails, still
+return the JSON and include no extra prose.
 
 Return exactly one raw JSON object matching the findings schema. Do not wrap it
 in markdown and do not append prose, citations, memory citations, or any text
@@ -200,9 +212,7 @@ Merge sub-agent findings with your own. Consume the JSON object from each
 sub-agent return. If the return wraps the JSON in markdown or prose, extract
 the JSON object and use it; discard the extra text and do not treat citations
 or prose around it as findings. If no JSON object conforming to
-`references/findings-schema.md` can be extracted, ask that reviewer once for a
-corrected raw JSON return when the platform supports continuing the sub-agent.
-If it is still invalid or the platform cannot continue it,
+`references/findings-schema.md` can be extracted,
 treat that auxiliary result as failed and perform that review lens yourself. If a selected auxiliary
 reviewer does not leave its artifact file, set `artifact_written` to false in
 the audit coverage but still use a valid raw JSON return for merge.

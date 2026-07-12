@@ -92,6 +92,11 @@ orchestrator thread; include the heartbeat id when telling the user.
 
 Do not emulate waiting with `sleep`, repeated reads, shell loops, timers, or repeated status checks in the same assistant turn — on either platform.
 
+This gate binds the orchestrator's own turns. The in-turn keep-alive wait
+loop that the hybrid skills mandate inside a codex-wrapper specialist's turn
+is that specialist's documented job, not a violation of this gate; do not
+"sanitize" it out of wrapper prompts.
+
 (Codex) If heartbeat automation tools are not loaded, search for `automation_update` first. If no heartbeat tool is available, tell the user the fallback is unavailable and end the turn after one verified handoff; do not replace the missing heartbeat with manual polling.
 
 A wake-up turn (heartbeat on Codex, task notification on Claude Code) may do one status check. If the specialist is still active, report one short status and stop. Do not sleep and check again.
@@ -168,8 +173,20 @@ The ratchet also covers reviewer classifications: a finding an earlier review
 classified as non-blocking in a verdict that passed cannot be re-raised as
 blocking by a later reviewer without new evidence. The orchestrator relays the
 prior classification from the ledger alongside the new finding — a ledger
-lookup, not orchestrator classification. In tiered loops, the design-tier
-classification outranks an execution-tier re-raise absent new evidence.
+lookup, not orchestrator classification.
+
+A reviewer whose task carries `Review mode: final-fresh-exit` is exempt from
+this classification arm: an exit gate blocks on its own judgment. When it
+re-raises a finding a prior review classified non-blocking, it must cite the
+prior classification from the ledger in its verdict, and the orchestrator
+surfaces the unresolved conflict to the user at loop end or escalation. In
+single-engine loops every Phase 5 fresh reviewer carries final-fresh-exit, so
+there the classification arm binds only first reviews and focused re-reviews.
+That narrowing is intended, not an oversight: thrash protection belongs to
+the early rounds, exit gates keep full judgment, and the round cap bounds the
+cost of a re-raise. The adjudication arm above is never exempted: overturning
+an evidence-based adjudication requires new evidence — and showing the
+original evidence wrong is itself new evidence.
 
 Audit artifact identity fields are self-reported by the reviewer. Treat them as
 an audit trail, not proof of dispatch. If the artifact is missing, identity

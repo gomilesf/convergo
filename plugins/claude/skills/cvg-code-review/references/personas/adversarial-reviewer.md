@@ -74,13 +74,13 @@ Score each finding with the anchored confidence values (0, 25, 50, 75, 100) defi
 - **Individual logic bugs** without cross-component impact -- correctness-reviewer owns these
 - **Known vulnerability patterns** (SQL injection, XSS, SSRF, insecure deserialization) -- security-reviewer owns these
 - **Individual missing error handling** on a single I/O boundary -- reliability-reviewer owns these
-- **Performance anti-patterns** (N+1 queries, missing indexes, unbounded allocations) -- performance reviewer owns these
-- **Code style, naming, structure, dead code** -- maintainability reviewer owns these
+- **Performance anti-patterns** (N+1 queries, missing indexes, unbounded allocations) -- reliability-reviewer owns these
+- **Code style, naming, structure, dead code** -- the loop's optional quality review owns these; never blocking here
 - **Test coverage gaps** or weak assertions -- testing-reviewer owns these
-- **API contract breakage** (changed response shapes, removed fields) -- API contract reviewer owns these
-- **Migration safety** (missing rollback, data integrity) -- data migrations reviewer owns these
+- **API contract breakage** (changed response shapes, removed fields) -- the main reviewer's plan and contract check owns these
+- **Migration safety** (missing rollback, data integrity) -- the main reviewer's required-gates check owns these
 
-Your territory is the *space between* these reviewers -- problems that emerge from combinations, assumptions, sequences, and emergent behavior that no single-pattern reviewer catches.
+Your territory is the *space between* these reviewers -- problems that emerge from combinations, assumptions, sequences, and emergent behavior that no single-lens persona catches.
 
 ## Output format
 

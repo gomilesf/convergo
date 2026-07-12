@@ -25,7 +25,7 @@ Score each finding with the anchored confidence values (0, 25, 50, 75, 100) defi
 ## What you don't flag
 
 - **Style preferences** -- variable naming, bracket placement, comment presence, import ordering. These don't affect correctness.
-- **Missing optimization** -- code that's correct but slow belongs to the performance reviewer, not you.
+- **Missing optimization** -- code that's correct but slow belongs to the reliability-reviewer, not you.
 - **Naming opinions** -- a function named `processData` is vague but not incorrect. If it does what callers expect, it's correct.
 - **Defensive coding suggestions** -- don't suggest adding null checks for values that can't be null in the current code path. Only flag missing checks when the null/undefined can actually occur.
 

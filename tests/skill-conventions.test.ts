@@ -356,6 +356,27 @@ describe("skill conventions", () => {
     expect(codexProtocol).not.toContain("persisted transcript")
   })
 
+  test("persona prose defers only to lenses that exist", () => {
+    const generic = new Set([
+      "code", "plan", "fresh", "main", "same", "later", "earlier", "prior",
+      "this", "that", "new", "quality", "focused", "auxiliary", "aux",
+      "another", "each", "the", "human",
+    ])
+    for (const relativeRoot of SKILL_ROOTS) {
+      for (const persona of CODE_REVIEW_PERSONAS) {
+        const content = readFileSync(
+          path.join(ROOT, relativeRoot, "cvg-code-review", "references", "personas", `${persona}.md`),
+          "utf8",
+        )
+        for (const match of content.matchAll(/\b([a-z]+(?:-[a-z]+)*)[ -]reviewer\b/gi)) {
+          const name = match[1].toLowerCase()
+          if (generic.has(name)) continue
+          expect(CODE_REVIEW_PERSONAS, `${persona} defers to "${match[0]}"`).toContain(`${name}-reviewer`)
+        }
+      }
+    }
+  })
+
   test("canonical cvg-multi-session protocol preserves hard orchestration gates", () => {
     const canonical = contentAfterMarker(
       readFileSync(path.join(ROOT, PLATFORM_SKILL_ROOTS.source, "cvg-multi-session", "SKILL.md"), "utf8"),

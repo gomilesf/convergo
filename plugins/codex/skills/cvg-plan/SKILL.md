@@ -227,8 +227,10 @@ result.
 
 ## Rules
 
-- **No code in the plan.** No function signatures, no pseudo-code, no code
-  blocks. The plan captures decisions and scope, not implementation.
+- **No code in the plan.** No pseudo-code, no implementation blocks. The plan
+  captures decisions and scope, not implementation. Exception: a function or
+  API signature may appear when the signature itself is the decision under
+  review; its implementation still stays out.
 - **Slices are behaviors, not components.** "Sandbox check works everywhere" is
   a slice. "Update creditMaintenance module" is a component unit; avoid this.
 - **Surfaces must be exhaustive.** For cross-cutting plans, list every entry
