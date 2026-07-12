@@ -32,6 +32,7 @@
     "plugin:validate": "claude plugin validate .claude-plugin/marketplace.json && claude plugin validate plugins/claude",
     "test": "bun test",
     "eval:wrapper": "bun run evals/wrapper-behavior/wrapper-compliance.ts",
+    "eval:repin": "bun run evals/wrapper-behavior/resume-repin.ts",
     "eval:scoping": "bun run evals/wrapper-behavior/orchestrator-scoping.ts"
   },
   "devDependencies": {

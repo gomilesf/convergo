@@ -43,7 +43,9 @@ Before the first spawn, echo the resolved bindings in one line — worker
 model and effort, reviewer engine, design-tier model, round cap — so a
 binding mistake surfaces before any specialist runs. If codex rejects the
 pinned execution-tier model (a retired id), fall back to the model the
-user's codex config resolves to, echo what actually ran (the `model:`
+user's codex config resolves to — respawn the specialist wrapper with the
+model pin dropped, initial `-m` and resume `-c` overrides both — echo what
+actually ran (the `model:`
 line of the run header, never an assumption), and flag it to the user if
 it sits below a frontier model at high reasoning effort: the tier split's
 economics assume execution is nearly as capable as the design tier.
@@ -119,7 +121,9 @@ background Claude agent:
      `codex exec -m <execution-model> -c model_reasoning_effort="<effort>"
      -o <scratch>/last-message.txt "<prompt>"
      > <scratch>/run-header.log 2>&1` (binding values from Engine
-     Bindings, or the user's override). Convergo passes no sandbox or
+     Bindings, or the user's override). `<scratch>` is a per-specialist
+     directory the orchestrator names in the specialist prompt, under the
+     loop's `/tmp/convergo/<loop-slug>/` tree. Convergo passes no sandbox or
      permission flags: the session runs with whatever the user's codex
      configuration grants, and role boundaries (a reviewer does not modify
      the repo) are contract lines in the role skills;
@@ -152,8 +156,12 @@ relay now — the resumed wrapper reads the `-o` file and finishes.
   Record the codex session id beside it for continuation.
 - Continue the specialist with `SendMessage` to the same wrapper; the wrapper
   resumes the recorded codex session with
-  `codex exec resume <session-id> "<follow-up>"` and relays the result
-  verbatim again.
+  `codex exec resume <session-id> -c model="<execution-model>"
+  -c model_reasoning_effort="<effort>" "<follow-up>"` and relays the result
+  verbatim again. The `-c` re-pin is load-bearing: `resume` does not accept
+  `-m` and re-resolves model parameters from the user's codex config,
+  silently dropping the first run's pin (verified live: a session launched
+  at `low` effort resumed at the config default without the override).
 - The wrapper must not read the repo, run other commands, review, summarize,
   or filter codex output. Relay fidelity is its whole job.
 

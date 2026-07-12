@@ -5,7 +5,16 @@ Behavioral evals for the codex-backed specialist wrapper pattern shared by
 `evals/trigger` (which only tests skill *selection*): these test what the
 pattern *does*.
 
-Both layers are manual, cost-bearing runs — they are not part of `bun test`.
+All of these are manual, cost-bearing runs — they are not part of `bun test`.
+
+## Ground truth: resume re-pin (`bun run eval:repin`)
+
+Three real codex calls asserting the behavior the hybrid skills' resume
+command depends on: `codex exec resume` drops the first run's `-m` pin and
+re-resolves from the user's config, so every resume must re-pin with
+`-c model=` / `-c model_reasoning_effort=`. Reports what a bare resume
+resolves to (the canary line), asserts the re-pinned resume holds. Rerun
+after every codex CLI upgrade.
 
 ## Layer A: wrapper compliance (`bun run eval:wrapper`)
 

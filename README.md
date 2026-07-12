@@ -447,6 +447,7 @@ bun test               # metadata + skill convention tests
 bun run plugin:validate
 bun run eval:trigger   # LLM eval: skill descriptions route the right prompts
 bun run eval:wrapper   # wrapper-compliance scenarios + per-rule ablation
+bun run eval:repin     # codex ground truth: resume drops the -m pin; -c re-pin holds
 bun run eval:scoping   # orchestrator cross-repo scoping scenarios
 ```
 
@@ -536,7 +537,7 @@ skills-src/        Canonical skill sources (with platform marker blocks)
 plugins/codex/     Codex plugin root: nine Codex-stripped skills
 plugins/claude/    Claude Code plugin root: eleven Claude-stripped skills (adds the hybrid presets)
 plugins/generic/   Base-only skill root for generic hosts
-evals/             Trigger-routing + wrapper-behavior evals (eval:trigger / eval:wrapper / eval:scoping)
+evals/             Trigger-routing + wrapper-behavior evals (eval:trigger / eval:wrapper / eval:repin / eval:scoping)
 .claude-plugin/    Claude Code marketplace metadata
 .agents/plugins/   Codex custom marketplace descriptor
 .cursor-plugin/    Cursor marketplace metadata

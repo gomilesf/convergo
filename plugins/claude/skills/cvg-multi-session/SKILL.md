@@ -148,7 +148,11 @@ ledger. Do not keep looping past the cap.
 
 **Loop ledger.** In-context round counting drifts over long loops, so the cap
 and the ratchet are enforced from a file, not from memory. When the loop
-starts, create `/tmp/convergo/<loop-slug>/ledger.md` and append one line per
+starts, create `/tmp/convergo/<loop-slug>/ledger.md` — the slug is
+`<UTC-timestamp>-<base-short-sha>` (timestamp alone when there is no repo),
+so every loop gets a fresh directory. Never append to or read another loop's
+ledger: a stale ledger's non-blocking adjudications would suppress a new
+loop's legitimate blockers. Append one line per
 event: `round <N> opened | reviewer <id> | <K> blockers` when feedback is
 sent, `round <N> closed | <verdict>` when the focused re-review returns,
 `cap raised to <N> | user` on authorization, and
