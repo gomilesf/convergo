@@ -33,7 +33,7 @@ Defaults; the user's invocation may override either tier.
 
 | Tier | Default | Runs |
 | --- | --- | --- |
-| Execution tier | `codex exec` with the user's configured model (recommended: a frontier codex model at high reasoning effort) | worker, first-pass fresh reviews, QA workers |
+| Execution tier | `codex exec -m gpt-5.6-sol` at `model_reasoning_effort=high` — the current frontier codex pin, updated with plugin releases | worker, first-pass fresh reviews, QA workers |
 | Design tier | Claude `fable` via the `Agent` tool `model` parameter | final-fresh-exit reviews |
 
 Focused re-reviews always return to the reviewer session that raised the
@@ -41,13 +41,12 @@ findings, on whichever tier that session lives — unchanged protocol.
 
 Before the first spawn, echo the resolved bindings in one line — worker
 model and effort, reviewer engine, design-tier model, round cap — so a
-binding mistake surfaces before any specialist runs. Resolve the
-execution-tier model and effort from the user's codex config (read
-`~/.codex/config.toml`, or the `model:` line of a run header) — echo what
-it actually resolves to, never what was assumed. If it resolves below a
-frontier model at high reasoning effort, say so to the user before
-spawning: the tier split's economics assume execution is nearly as capable
-as the design tier.
+binding mistake surfaces before any specialist runs. If codex rejects the
+pinned execution-tier model (a retired id), fall back to the model the
+user's codex config resolves to, echo what actually ran (the `model:`
+line of the run header, never an assumption), and flag it to the user if
+it sits below a frontier model at high reasoning effort: the tier split's
+economics assume execution is nearly as capable as the design tier.
 
 ## Procedure
 
@@ -117,8 +116,10 @@ background Claude agent:
      foreground Bash timeout) from the worktree named in the specialist
      prompt, workers and reviewers alike, with the final message written
      to a file and the run header captured:
-     `codex exec -o <scratch>/last-message.txt "<prompt>"
-     > <scratch>/run-header.log 2>&1`. Convergo passes no sandbox or
+     `codex exec -m <execution-model> -c model_reasoning_effort="<effort>"
+     -o <scratch>/last-message.txt "<prompt>"
+     > <scratch>/run-header.log 2>&1` (binding values from Engine
+     Bindings, or the user's override). Convergo passes no sandbox or
      permission flags: the session runs with whatever the user's codex
      configuration grants, and role boundaries (a reviewer does not modify
      the repo) are contract lines in the role skills;

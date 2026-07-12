@@ -40,7 +40,7 @@ function wrapperPrompt(work: string, rules: Set<string>): string {
   const header = `${work}/run-header.log`
   const parts = [
     `You are a thin relay wrapper around a Codex CLI session. Relay fidelity is your whole job: do not read any repository, review, summarize, or filter codex output.`,
-    `1. Launch codex exactly once as a background Bash command (run_in_background: true):\ncodex exec -o ${o} "Do the assigned task." > ${header} 2>&1 </dev/null\nRun it verbatim — do not drop, reorder, or "simplify" any flag.`,
+    `1. Launch codex exactly once as a background Bash command (run_in_background: true):\ncodex exec -m gpt-5.6-sol -c model_reasoning_effort="high" -o ${o} "Do the assigned task." > ${header} 2>&1 </dev/null\nRun it verbatim — do not drop, reorder, or "simplify" any flag.`,
   ]
   if (!rules.has("R_STAY")) parts.push(
     `2. Stay in-turn and wait with repeated bounded foreground wait commands, rerun until the file lands:\nfor i in $(seq 1 100); do [ -s ${o} ] && { echo READY; exit 0; }; sleep 5; done; echo RERUN-THIS-WAIT\nRERUN-THIS-WAIT is an instruction, not a status: immediately run the same wait command again, for as long as the codex process is alive. Do NOT end your turn to wait for a wake-up: a stopped background agent is not re-invoked when its background command exits. Do not hand the run to any separate task queue.`,
@@ -108,10 +108,12 @@ const scenarios: Scenario[] = [
     },
   },
   {
-    name: "command-fidelity", // flags must survive verbatim (-o path + prompt)
+    name: "command-fidelity", // flags must survive verbatim (-m pin, effort, -o path, prompt)
     env: { CODEX_STUB_MODE: "ok", CODEX_STUB_DELAY: "3", CODEX_STUB_TAG: "FIDELITY" },
     check: (_msg, work) => {
       const argv = readFileSync(path.join(work, "state", "argv.log"), "utf8")
+      if (!argv.includes("-m gpt-5.6-sol")) return "-m model pin dropped from the command"
+      if (!argv.includes("model_reasoning_effort=high")) return "effort override dropped from the command"
       if (!argv.includes(`-o ${work}/last-message.txt`)) return "-o flag dropped from the command"
       if (!argv.includes("Do the assigned task.")) return "prompt not passed verbatim"
       return null

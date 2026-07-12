@@ -34,15 +34,15 @@ Defaults; the user's invocation may override either tier.
 | Tier | Default | Runs |
 | --- | --- | --- |
 | Design tier | Claude `fable` via the `Agent` tool `model` parameter | planner, plan revisions |
-| Execution tier | `codex exec` with the user's configured model (recommended: a frontier codex model at high reasoning effort) | fresh plan reviewers |
+| Execution tier | `codex exec -m gpt-5.6-sol` at `model_reasoning_effort=high` — the current frontier codex pin, updated with plugin releases | fresh plan reviewers |
 
 Before the first spawn, echo the resolved bindings in one line — planner
 model, reviewer engine and model, round cap — so a binding mistake surfaces
-before any specialist runs. Resolve the execution-tier model and effort
-from the user's codex config (read `~/.codex/config.toml`, or the `model:`
-line of a run header) — echo what it actually resolves to, never what was
-assumed. If it resolves below a frontier model at high reasoning effort,
-say so to the user before spawning: cross-model review only pays if the
+before any specialist runs. If codex rejects the pinned execution-tier
+model (a retired id), fall back to the model the user's codex config
+resolves to, echo what actually ran (the `model:` line of the run header,
+never an assumption), and flag it to the user if it sits below a frontier
+model at high reasoning effort: cross-model review only pays if the
 reviewing engine is near-peer.
 
 ## Procedure
@@ -83,8 +83,10 @@ background Claude agent:
      (`run_in_background: true` — codex runs routinely outlast the single
      foreground Bash timeout) from the repo named in the specialist prompt,
      with the final message written to a file and the run header captured:
-     `codex exec -o <scratch>/last-message.txt "<prompt>"
-     > <scratch>/run-header.log 2>&1 </dev/null`. Convergo passes no
+     `codex exec -m <execution-model> -c model_reasoning_effort="<effort>"
+     -o <scratch>/last-message.txt "<prompt>"
+     > <scratch>/run-header.log 2>&1 </dev/null` (binding values from
+     Engine Bindings, or the user's override). Convergo passes no
      sandbox or permission flags: the session runs with whatever the
      user's codex configuration grants, and the reviewer's read-only
      conduct is a contract line in its role skill;

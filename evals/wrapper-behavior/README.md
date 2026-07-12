@@ -20,7 +20,7 @@ message:
 | `ok-long` | keep-alive: stub delay outlives a full wait loop, forcing a `RERUN-THIS-WAIT` rerun instead of an early stop |
 | `exit1-with-output` | the R4 incident: nonzero exit with complete `-o` file is still relayed, never relaunched |
 | `exit1-empty` | hard failure reported, not retried, no fabricated payload |
-| `command-fidelity` | `-o` path and prompt survive verbatim |
+| `command-fidelity` | `-m` pin, effort override, `-o` path, and prompt survive verbatim |
 
 ### Ablation
 
