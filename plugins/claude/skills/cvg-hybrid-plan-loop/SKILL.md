@@ -36,6 +36,10 @@ Defaults; the user's invocation may override either tier.
 | Design tier | Claude `fable` via the `Agent` tool `model` parameter | planner, plan revisions |
 | Execution tier | `codex exec` with the user's configured model (recommended: a frontier codex model at high reasoning effort) | fresh plan reviewers |
 
+Before the first spawn, echo the resolved bindings in one line — planner
+model, reviewer engine and model, round cap — so a binding mistake surfaces
+before any specialist runs.
+
 ## Procedure
 
 Apply the `cvg-plan-loop` skill in full — same phases, protocol gates,
@@ -82,7 +86,9 @@ background Claude agent:
   3. stay in-turn and wait with repeated bounded foreground wait commands,
      rerun until the file lands:
      `for i in $(seq 1 100); do [ -s <scratch>/last-message.txt ] && { echo
-     READY; exit 0; }; sleep 5; done; echo NOT-YET`.
+     READY; exit 0; }; sleep 5; done; echo RERUN-THIS-WAIT`.
+     `RERUN-THIS-WAIT` is an instruction, not a status: immediately run the
+     same wait command again, for as long as the codex process is alive.
      The wrapper must NOT end its turn to wait for a wake-up: a stopped
      background specialist is not re-invoked when its background command
      exits, and the run becomes an orphan until someone nudges the wrapper.

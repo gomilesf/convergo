@@ -20,10 +20,10 @@ import path from "node:path"
 
 const HERE = import.meta.dir
 const STUB_DIR_SRC = path.join(HERE, "stub")
-// Must exceed one full wait loop (100 x 5s): a hard-failure scenario only
-// resolves after the wrapper finishes a NOT-YET cycle and applies the
-// empty-file rule.
-const TIMEOUT_MS = 900_000
+// Must exceed the longest scenario: ok-long's 520s stub delay outlives one
+// full wait loop (100 x 5s), forcing a RERUN-THIS-WAIT rerun before the
+// relay turn.
+const TIMEOUT_MS = 1_500_000
 
 const ablate = new Set(
   (process.argv.find((a) => a.startsWith("--ablate"))?.split("=")[1] ??
@@ -43,7 +43,7 @@ function wrapperPrompt(work: string, rules: Set<string>): string {
     `1. Launch codex exactly once as a background Bash command (run_in_background: true):\ncodex exec -o ${o} "Do the assigned task." > ${header} 2>&1 </dev/null\nRun it verbatim — do not drop, reorder, or "simplify" any flag.`,
   ]
   if (!rules.has("R_STAY")) parts.push(
-    `2. Stay in-turn and wait with repeated bounded foreground wait commands, rerun until the file lands:\nfor i in $(seq 1 100); do [ -s ${o} ] && { echo READY; exit 0; }; sleep 5; done; echo NOT-YET\nDo NOT end your turn to wait for a wake-up: a stopped background agent is not re-invoked when its background command exits. Do not hand the run to any separate task queue.`,
+    `2. Stay in-turn and wait with repeated bounded foreground wait commands, rerun until the file lands:\nfor i in $(seq 1 100); do [ -s ${o} ] && { echo READY; exit 0; }; sleep 5; done; echo RERUN-THIS-WAIT\nRERUN-THIS-WAIT is an instruction, not a status: immediately run the same wait command again, for as long as the codex process is alive. Do NOT end your turn to wait for a wake-up: a stopped background agent is not re-invoked when its background command exits. Do not hand the run to any separate task queue.`,
   )
   if (!rules.has("R_EXITCODE")) parts.push(
     `3. The -o file is the source of truth, not the exit code. Codex can exit nonzero after a completed run, so a "command failed" report with a non-empty -o file still means success — relay it. Treat the run as failed only when the process has exited and the -o file is still empty; then relay the tail of ${header} as a failure report instead of retrying.`,
@@ -75,6 +75,15 @@ const scenarios: Scenario[] = [
     check: (msg, work) => {
       if (!msg.includes("STUB-RELAY-PAYLOAD OK-SLOW")) return "payload not relayed"
       if (!msg.match(/Codex session: 00000000-dead-beef/)) return "session id line missing"
+      if (invocations(work) !== 1) return `codex launched ${invocations(work)} times, want 1`
+      return null
+    },
+  },
+  {
+    name: "ok-long", // keep-alive: stub delay outlives one full wait loop (100 x 5s)
+    env: { CODEX_STUB_MODE: "ok", CODEX_STUB_DELAY: "520", CODEX_STUB_TAG: "OK-LONG" },
+    check: (msg, work) => {
+      if (!msg.includes("STUB-RELAY-PAYLOAD OK-LONG")) return "payload not relayed after a full wait cycle — wrapper likely stopped instead of rerunning the wait"
       if (invocations(work) !== 1) return `codex launched ${invocations(work)} times, want 1`
       return null
     },

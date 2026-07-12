@@ -26,7 +26,8 @@ Record:
 - worktree status,
 - task-owned and unrelated dirty files,
 - source artifact or implementation goal,
-- allowed external side effects, if any.
+- allowed external side effects, if any,
+- the loop ledger path, created per the Gate 5 loop-ledger rule.
 
 Pass unrelated dirty state to the worker and tell it not to overwrite those files.
 

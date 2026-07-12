@@ -141,15 +141,35 @@ A "ready with fixes" verdict (plan criteria met, only non-blocking P2 findings
 remain) satisfies the exit condition; carry the remaining P2 list into the
 completion summary instead of looping on it.
 
-**Round cap.** One round is one full cycle of steps 1-4. After 3 rounds without
-a clean fresh review, stop the loop and escalate to the user with all open
-findings and their adjudications. Do not keep looping past the cap.
+**Round cap.** One round is one full cycle of steps 1-4. The cap is 3 rounds
+unless the user set a different cap in the invocation. When the cap is reached
+without a clean fresh review, stop the loop and escalate to the user with all
+open findings, their adjudications, and the one-line instruction to authorize
+more rounds; an authorization raises the cap explicitly and is recorded in the
+ledger. Do not keep looping past the cap.
+
+**Loop ledger.** In-context round counting drifts over long loops, so the cap
+and the ratchet are enforced from a file, not from memory. When the loop
+starts, create `/tmp/convergo/<loop-slug>/ledger.md` and append one line per
+event: `round <N> opened | reviewer <id> | <K> blockers` when feedback is
+sent, `round <N> closed | <verdict>` when the focused re-review returns,
+`cap raised to <N> | user` on authorization, and
+`adjudication | <finding key> | <verdict> | by <role>` for every validity or
+severity adjudication. The cap check and the adjudication ratchet read the
+ledger; the completion summary quotes it.
 
 **Adjudication ratchet.** A finding adjudicated invalid or out of scope by the
 role-specific feedback skill in an earlier round (same file, line, and issue)
 cannot re-block a later round unless new evidence appears. The orchestrator
 relays the prior adjudication back to the reviewer; the reviewer decides
 whether new evidence overrides it.
+
+The ratchet also covers reviewer classifications: a finding an earlier review
+classified as non-blocking in a verdict that passed cannot be re-raised as
+blocking by a later reviewer without new evidence. The orchestrator relays the
+prior classification from the ledger alongside the new finding — a ledger
+lookup, not orchestrator classification. In tiered loops, the design-tier
+classification outranks an execution-tier re-raise absent new evidence.
 
 Audit artifact identity fields are self-reported by the reviewer. Treat them as
 an audit trail, not proof of dispatch. If the artifact is missing, identity

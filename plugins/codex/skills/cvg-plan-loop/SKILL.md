@@ -28,7 +28,8 @@ Record:
 - current `git rev-parse HEAD` if available,
 - dirty worktree state,
 - source prompt or input document,
-- expected plan path or target docs directory when known.
+- expected plan path or target docs directory when known,
+- the loop ledger path, created per the Gate 5 loop-ledger rule.
 
 Classify dirty files:
 
