@@ -58,13 +58,16 @@ callback templates, and round cap — with these routing overrides:
 1. **Worker (Phase 1):** codex-backed specialist (pattern below), role
    skill `cvg-work`.
 2. **Fresh code review (Phase 2):** codex-backed specialist (pattern
-   below), role skill `cvg-code-review`. Codex
-   sessions run through
-   `codex exec`, which has no generic subagent primitive, so expect
-   auxiliary persona coverage to run inline (the role skill's documented
-   fallback). Inline coverage is valid for first-pass reviews; it can never
-   satisfy the final-fresh-exit condition, which is one more reason the
-   final gate below is a native design-tier specialist.
+   below), role skill `cvg-code-review`. `codex exec` sessions expose a
+   subagent primitive (`collaboration.spawn_agent` — verified live):
+   instruct codex reviewers to dispatch their auxiliary personas through
+   it and record the returned child ids in the coverage object. Inline
+   coverage remains the role skill's documented fallback when a spawn
+   fails. Either way, codex-side child ids reach the orchestrator only
+   through the relay — self-reported — so execution-tier coverage still
+   never satisfies the final-fresh-exit condition, which is one more
+   reason the final gate below is a native design-tier specialist whose
+   dispatches the orchestrator verifies from its own tool results.
 3. **Feedback (Phase 3):** unchanged — blockers return to the codex-backed
    worker with `cvg-code-review-feedback`.
 4. **Tiered exit (Phase 5 override):** a clean execution-tier fresh review
@@ -127,19 +130,17 @@ background Claude agent:
      permission flags: the session runs with whatever the user's codex
      configuration grants, and role boundaries (a reviewer does not modify
      the repo) are contract lines in the role skills;
-  3. stay in-turn and wait with repeated bounded foreground wait commands,
-     rerun until the file lands:
-     `for i in $(seq 1 100); do [ -s <scratch>/last-message.txt ] && { echo
-     READY; exit 0; }; sleep 5; done; echo RERUN-THIS-WAIT`.
-     `RERUN-THIS-WAIT` is an instruction, not a status: immediately run the
-     same wait command again, for as long as the codex process is alive.
-     The wrapper must NOT end its turn to wait for a wake-up: a stopped
-     background specialist is not re-invoked when its background command
-     exits, and the run becomes an orphan until someone nudges the wrapper.
-     Do not hand the run to any separate background task queue;
-  4. once READY, relay the `-o` file's content verbatim as its own final
-     message, appending one line: `Codex session: <session-id>` (grep
-     `session id:` from the run header log).
+  3. end its turn immediately after the launch, with an ARMED callback
+     naming the paths:
+     `ARMED. Codex running. Output: <scratch>/last-message.txt. Header:
+     <scratch>/run-header.log.`
+     Do not wait for codex in-turn and do not poll: completion notices
+     queue in a stopped wrapper's transcript without waking it (verified
+     live), and the orchestrator owns the waiting — see the watcher below;
+  4. when the orchestrator messages it to relay, read the `-o` file and
+     relay its content verbatim as its own final message, appending one
+     line: `Codex session: <session-id>` (grep `session id:` from the run
+     header log).
 
 The `-o` file is the source of truth, not the exit code. Codex can exit
 nonzero after a completed run (shutdown or hook noise), so a "command
@@ -150,15 +151,33 @@ and then relay the tail of the run header log as a failure callback
 instead of retrying. Append `</dev/null` to the codex command so it never
 waits on stdin.
 
-If a wrapper does stop early anyway, it is recoverable: `SendMessage` it to
-relay now — the resumed wrapper reads the `-o` file and finishes.
+The orchestrator waits, not the wrapper. On the ARMED callback, arm a
+background watcher on the named output file (`run_in_background: true`):
+
+`for i in $(seq 1 1440); do [ -s <scratch>/last-message.txt ] && { echo
+DONE; exit 0; }; pgrep -f "<scratch>" >/dev/null || { echo DIED; exit 0;
+}; sleep 5; done; echo TIMEOUT`
+
+Its completion wakes the orchestrator. On DONE or DIED, `SendMessage` the
+wrapper to relay now; the wrapper applies the source-of-truth rule above.
+On TIMEOUT (two hours), escalate to the user. A background watcher that
+exits when its condition holds is the platform's own single-completion
+shape — it is not in-turn waiting.
+
+Fast path: when codex completes while the wrapper is still in its launch
+turn (the completion notice arrives in-turn), the wrapper relays
+immediately instead of ARMED. A relay-shaped first callback — payload plus
+`Codex session:` line — is the result; skip the watcher.
 - The wrapper agent id from the `Agent` tool result is the specialist id.
   Record the codex session id beside it for continuation.
 - Continue the specialist with `SendMessage` to the same wrapper; the wrapper
-  resumes the recorded codex session with
+  launches
   `codex exec resume <session-id> -c model="<execution-model>"
-  -c model_reasoning_effort="<effort>" "<follow-up>"` and relays the result
-  verbatim again. The `-c` re-pin is load-bearing: `resume` does not accept
+  -c model_reasoning_effort="<effort>" -o <scratch>/last-message-<round>.txt
+  "<follow-up>" > <scratch>/run-header-<round>.log 2>&1 </dev/null`
+  as a background Bash command and ends its turn ARMED again with the new
+  paths; the orchestrator arms a fresh watcher on the new output file. The
+  `-c` re-pin is load-bearing: `resume` does not accept
   `-m` and re-resolves model parameters from the user's codex config,
   silently dropping the first run's pin (verified live: a session launched
   at `low` effort resumed at the config default without the override).

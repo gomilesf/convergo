@@ -242,8 +242,10 @@ Fable blockers re-enter the normal feedback cycle (worker fixes, the same
 Fable session re-reviews, the next round starts back at the Codex tier). In
 practice Fable runs once or twice per loop — exactly when the cheap engine
 believes the work is done. This split also keeps the protocol honest: the
-final exit requires real dispatched sub-reviewers, which inline Codex
-sessions cannot provide.
+final exit requires sub-reviewer dispatches the orchestrator can verify
+from its own tool results — codex-side spawns (real since codex shipped
+collaboration subagents) reach the orchestrator only as self-reported
+relay text, so they promote but never exit.
 
 **Codex specialists run with the user's own permissions.** Convergo is a
 developer tool: it passes no sandbox or permission flags and manages no

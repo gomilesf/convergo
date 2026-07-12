@@ -129,10 +129,10 @@ needed.
 
 Do not emulate waiting with `sleep`, repeated reads, shell loops, timers, or repeated status checks in the same assistant turn — on either platform.
 
-This gate binds the orchestrator's own turns. The in-turn keep-alive wait
-loop that the hybrid skills mandate inside a codex-wrapper specialist's turn
-is that specialist's documented job, not a violation of this gate; do not
-"sanitize" it out of wrapper prompts.
+This gate forbids in-turn waiting, not background watchers: a background
+watcher command that exits when its condition holds (the hybrid loops'
+codex-completion watcher) is the platform's single-completion shape and
+ends the turn properly — arming one is not a violation of this gate.
 
 <!-- codex -->
 (Codex) If heartbeat automation tools are not loaded, search for `automation_update` first. If no heartbeat tool is available, tell the user the fallback is unavailable and end the turn after one verified handoff; do not replace the missing heartbeat with manual polling.

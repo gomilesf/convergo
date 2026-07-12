@@ -20,13 +20,16 @@ after every codex CLI upgrade.
 
 Spawns a real sonnet wrapper (`claude -p`) against a stub `codex` binary
 (`stub/codex`, staged at the front of PATH) that records argv and plays a
-scripted failure mode. Asserts on recorded invocations + the wrapper's final
-message:
+scripted failure mode. Each scenario runs two phases against the same claude
+session — launch + ARMED, then a resumed relay request — mirroring the
+ARMED-handoff design in which the orchestrator owns the waiting via a
+background watcher. Asserts on recorded invocations, the ARMED message, and
+the relay:
 
 | scenario | asserts |
 | --- | --- |
-| `ok-slow` | payload relayed verbatim + session line; exactly 1 launch; survives a wait cycle |
-| `ok-long` | keep-alive: stub delay outlives a full wait loop, forcing a `RERUN-THIS-WAIT` rerun instead of an early stop |
+| `arm-fast` | slow stub (60s): phase 1 ends ARMED without waiting, duration-bounded; an R_ARM-ablated wrapper waits and blows the bound |
+| `relay-on-request` | fast stub (2s): payload + session line relayed verbatim — in-turn via the fast path or on the resumed relay request; exactly 1 launch |
 | `exit1-with-output` | the R4 incident: nonzero exit with complete `-o` file is still relayed, never relaunched |
 | `exit1-empty` | hard failure reported, not retried, no fabricated payload |
 | `command-fidelity` | `-m` pin, effort override, `-o` path, and prompt survive verbatim |
@@ -36,7 +39,7 @@ message:
 `bun run eval:wrapper -- --ablate R_EXITCODE` removes a rule block from the
 wrapper prompt and reruns the scenarios. A rule is load-bearing if removing
 it fails the scenario that motivated it; a rule whose removal changes
-nothing is a deletion candidate. Rules: `R_STAY`, `R_EXITCODE`, `R_ONCE`,
+nothing is a deletion candidate. Rules: `R_ARM`, `R_EXITCODE`, `R_ONCE`,
 `R_RELAY`.
 
 The wrapper prompt template in `wrapper-compliance.ts` mirrors the
@@ -61,16 +64,19 @@ section is load-bearing. Two grader lessons are baked in: don't assert
 phrasing (two false negatives, one because the agent answered in Chinese),
 assert content.
 
-## Baseline results (2026-07-04, codex-cli 0.142.3, sonnet wrapper)
+## Baseline results (2026-07-12, codex-cli 0.144.1, sonnet wrapper, ARMED-handoff design)
 
-- Layer A baseline: 4/4.
-- Ablations:
-  - `R_STAY` removed → `ok-slow` FAILS, reproducing the production orphan
-    verbatim ("Codex is running in the background; I'll wait...").
-    **Load-bearing.**
-  - `R_EXITCODE` removed → `exit1-with-output` passed 2/2 and
-    `exit1-empty` passed 1/1. Not shown load-bearing for a sonnet wrapper
-    when `R_STAY`/`R_ONCE`/`R_RELAY` are present (the wait loop already
-    routes by file, not exit code). Kept anyway: it also carries the
-    hard-failure reporting path, wrapper models vary, and its cost is a
-    few lines — but it is the first candidate if the pattern needs a diet.
+- Layer A baseline: 5/5 (`arm-fast`, `relay-on-request`, `exit1-with-output`,
+  `exit1-empty`, `command-fidelity`).
+- `R_ARM` ablation → `arm-fast` FAILS: the wrapper stops with "Codex session
+  launched in the background. I'll wait for it to complete before relaying"
+  — the 2026-07-04 production-orphan phrasing verbatim. **Load-bearing** for
+  callback shape; note the orchestrator-side watcher still recovers even
+  this drift, which is the point of the ARMED-handoff design.
+- Historical: the pre-ARMED wait-loop design and its `R_STAY` rule are gone —
+  the orchestrator owns the waiting now, so wrapper keep-alive is a
+  non-problem by construction.
+- Eval-harness limit, not a production limit: `claude -p` kills background
+  children at process exit (verified), so no scenario can observe a
+  cross-process ARMED-then-relay gap; `arm-fast` (slow stub, phase 1 only)
+  and `relay-on-request` (fast stub, both phases) split that coverage.
