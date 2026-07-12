@@ -46,7 +46,7 @@ Read:
 - The diff (`git diff <base>..HEAD`)
 - Changed files in full, not just diff hunks
 
-Fresh-review evidence boundary: Main reviewer must not consult project memory, prior sessions, rollout summaries, or external history.
+Fresh-review evidence boundary: Main reviewer must not consult project memory, prior sessions, rollout summaries, or external history. The repository's own git history (log, blame, commit messages) is repo evidence, not external history.
 Use only explicit task input, the plan, linked contract, repo-local
 implementation notes, current diff, repo files read during this review, and
 test/build output produced in this run. Do not cite memory or include memory citations.

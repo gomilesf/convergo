@@ -56,10 +56,8 @@ important for new infrastructure, protocol/API design, and cross-cutting
 concerns. For simple changes where the approach is obvious, skip this.
 
 **Codebase exploration:** Use `repo-research-analyst` with prompt:
-"Scope: technology, architecture, patterns. <planning context summary>". The
-`Scope:` prefix limits the research to technology stack, architecture, and
-implementation patterns, skipping issue conventions and templates the planner
-does not need.
+"<planning context summary>". The persona is scoped to what planning needs —
+technology stack, architecture, implementation patterns.
 
 For each track: read the skill-local prompt asset at
 `references/personas/<researcher-name>.md` and dispatch a generic subagent

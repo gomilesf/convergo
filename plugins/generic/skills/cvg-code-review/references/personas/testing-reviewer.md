@@ -31,7 +31,7 @@ Score each finding with the anchored confidence values (0, 25, 50, 75, 100) defi
 
 ## Output format
 
-Use only the prompt, plan, diff, and repository files you read for this review; do not consult project memory, prior sessions, rollout summaries, or external history. Return exactly one raw JSON object matching the findings schema. Do not wrap it in markdown and do not append prose, citations, memory citations, or any text after the JSON.
+Use only the prompt, plan, diff, and repository files you read for this review; do not consult project memory, prior sessions, rollout summaries, or external history. The repository's own git history (log, blame, commit messages) is repo evidence, not external history. Return exactly one raw JSON object matching the findings schema. Do not wrap it in markdown and do not append prose, citations, memory citations, or any text after the JSON.
 
 ```json
 {

@@ -81,7 +81,7 @@ session and verify its id per Gate 1.
 Reviewer prompt must include:
 
 - role: fresh plan reviewer,
-- the line `Do not consult project memory, prior sessions, rollout summaries, or external history.` before the required skill line,
+- the line `Do not consult project memory, prior sessions, rollout summaries, or external history. The repository's own git history (log, blame, commit messages) is repo evidence, not external history.` before the required skill line,
 - callback destination per Gate 2,
 - required cvg-plan-review skill, such as `cvg-plan-review`,
 - original planning goal or source prompt,

@@ -14,7 +14,7 @@ incomplete invariants, wrong slice boundaries, and over-designed scope.
 The task context provides the plan path. Read the plan document and any linked
 behavior contract.
 
-Fresh-review evidence boundary: Main reviewer must not consult project memory, prior sessions, rollout summaries, or external history.
+Fresh-review evidence boundary: Main reviewer must not consult project memory, prior sessions, rollout summaries, or external history. The repository's own git history (log, blame, commit messages) is repo evidence, not external history.
 Use only explicit task input, the plan, linked contract, repo files read during
 this review, and test/build output produced in this run. Do not cite memory or include memory citations.
 
@@ -153,7 +153,7 @@ under `/tmp/convergo/cvg-plan-review/<run-id>/`.
 Every persona prompt must include this boundary:
 
 ```text
-Do not consult project memory, prior sessions, rollout summaries, or external history.
+Do not consult project memory, prior sessions, rollout summaries, or external history. The repository's own git history (log, blame, commit messages) is repo evidence, not external history.
 Use only explicit task input, the plan, linked contract, and repo files read during this review.
 Do not cite memory or include memory citations.
 ```

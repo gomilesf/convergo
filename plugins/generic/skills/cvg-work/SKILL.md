@@ -74,7 +74,8 @@ A slice is done when:
 
 **Do NOT write all tests first, then all implementation.** That is horizontal
 slicing: it produces tests that verify imagined behavior rather than actual
-behavior. One test -> one implementation -> verify -> next test.
+behavior. Within a slice, order tests and implementation however works —
+the parent-commit evidence rule is the contract, not a step sequence.
 
 ### 3. Test quality guidelines
 
@@ -189,11 +190,19 @@ Do not implement through a contract gap, even when the missing behavior seems
 small or obvious. The planner or coordination channel must update the plan or
 contract before implementation continues.
 
+A contract gap is a missing plan-level decision: an unlisted surface, a new
+invariant, or externally visible behavior the plan never decided. An
+implementation-level choice the plan leaves open (an internal error shape,
+a private helper's structure) is not a contract gap — make the call and
+record it under Uncertain assumptions in the implementation notes; the
+review gate adjudicates it.
+
 ## Rules
 
 - **Slice by slice, not file by file.** Complete one slice, including behavior
   across all of its surfaces, before starting the next.
-- **One test -> one implementation -> verify.** Not all tests first.
+- **Not all tests first.** Tests batched ahead of all implementation verify
+  imagined behavior; write them inside the slice they belong to.
 - **TDD is not optional; its enforcement point is evidence.** Every "done
   when" criterion carries a test that fails against the slice's parent
   commit. If a criterion cannot be expressed as

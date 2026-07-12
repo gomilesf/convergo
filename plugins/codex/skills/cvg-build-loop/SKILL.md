@@ -88,7 +88,7 @@ After the worker callback is visible, spawn a fresh reviewer specialist session.
 Reviewer prompt must include:
 
 - role: fresh code reviewer,
-- the line `Do not consult project memory, prior sessions, rollout summaries, or external history.` before the required skill line,
+- the line `Do not consult project memory, prior sessions, rollout summaries, or external history. The repository's own git history (log, blame, commit messages) is repo evidence, not external history.` before the required skill line,
 - callback destination per Gate 2,
 - required cvg-code-review skill, such as `cvg-code-review`,
 - review mode when this reviewer is the final exit gate,
@@ -180,7 +180,7 @@ Focused scope:
 Focused re-review prompt must include:
 
 - `Review mode: focused-re-review`,
-- `Do not consult project memory, prior sessions, rollout summaries, or external history.`
+- `Do not consult project memory, prior sessions, rollout summaries, or external history. The repository's own git history (log, blame, commit messages) is repo evidence, not external history.`
 
 Focused re-review does not require auxiliary reviewers. Do not ask the focused
 reviewer to dispatch auxiliary reviewers or synthesize inline auxiliary
