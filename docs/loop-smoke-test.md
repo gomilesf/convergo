@@ -63,3 +63,35 @@ result (never from specialist prose). Expected cost: ~5 subagent runs of
 The same scenario runs on Codex by substituting the Gate 0 Codex column:
 `create_thread` / `send_message_to_thread` / `read_thread` plus heartbeat
 waiting instead of task notifications.
+
+## Hybrid transport (codex wrapper + orchestrator watcher)
+
+End-to-end check of the ARMED-handoff transport in the two hybrid skills,
+with a real codex session. Run it before releases that touch the
+Codex-Backed Specialist Pattern. First verified 2026-07-12 (codex-cli
+0.144.1, sonnet wrapper).
+
+Scratch: `mkdir -p /tmp/cvg-hybrid-smoke`.
+
+**Leg 1 — launch + ARMED.** Spawn a background sonnet wrapper with the
+pattern's verbatim prompt (launch command with the `-m` pin and effort
+override, ARMED instruction, fast path, source-of-truth rule, relay rule,
+resume rule). Pass: ARMED callback naming the output and header paths; the
+codex process survives the wrapper stopping.
+
+**Leg 2 — watcher wake.** Arm the skill's verbatim watcher (background
+Bash, `[c]odex.*<scratch>` pattern). Pass: watcher exits `DONE` when the
+`-o` file lands and its completion wakes the orchestrator.
+
+**Leg 3 — relay.** `SendMessage` the wrapper "Relay now." Pass: the `-o`
+content relayed verbatim plus a `Codex session: <id>` line.
+
+**Leg 4 — resume + re-pin.** Send a follow-up task. Pass: the wrapper
+greps the session id itself, launches `codex exec resume` with both `-c`
+re-pins and round-2 files, ARMs again; the round-2 run header shows the
+pinned model AND effort (the re-pin holding on resume is the load-bearing
+assertion — an unpinned resume silently reverts to config defaults); the
+round-2 relay returns the payload with the SAME session id.
+
+Overall pass: all four legs, one codex launch per round, no wrapper nudges
+needed outside the two designed relay requests.
