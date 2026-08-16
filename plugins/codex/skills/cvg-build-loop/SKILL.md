@@ -64,8 +64,9 @@ likely files, broad surface checklists, previous reviewer risk hints, old
 commits, or repo policy summaries unless the user supplied them as task
 authority and they are not linked from the plan.
 
-(Codex) After verifying the worker thread with `read_thread`, send the worker
-its verified thread id before creating the heartbeat.
+(Codex) Include the protocol's `<specialist-thread-id>` identity line in the
+worker prompt. The App Server transport replaces it before turn start; after
+`read_thread` verification, confirm the ids match before creating the heartbeat.
 
 Worker completion callback template:
 
@@ -115,8 +116,9 @@ Reviewer callback template:
 I am the fresh code reviewer. My specialist id is <reviewer-id>. This first-pass full code review is complete. Verdict: <ready to merge / ready with fixes / not ready>. Findings: <none or numbered blocker list>. Non-blocking P2 notes: <none or brief list>. Please decide the next step.
 ```
 
-(Codex) After verifying the reviewer thread with `read_thread`, send the
-reviewer its verified thread id before creating the heartbeat.
+(Codex) Include the protocol's `<specialist-thread-id>` identity line in the
+reviewer prompt. The App Server transport replaces it before turn start; after
+`read_thread` verification, confirm the ids match before creating the heartbeat.
 
 Complete the waiting handoff per Gate 3 and end the active turn while waiting.
 

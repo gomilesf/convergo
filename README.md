@@ -206,13 +206,25 @@ discuss goal
 ```
 
 The loop skills share one protocol (`cvg-multi-session`), bound to the host
-platform before anything else runs: specialists are Codex threads (callbacks
-via `send_message_to_thread`, heartbeat waiting) or Claude Code background
-agents (final-message callbacks, task-notification waiting). Each platform's
-build ships only its own transport mechanics — the copies under
+platform before anything else runs: specialists are Codex App Server threads
+(dynamic-tool callbacks via the attached transport, heartbeat waiting) or Claude Code
+background agents (final-message callbacks, task-notification waiting). Each
+platform's build ships only its own transport mechanics — the copies under
 `plugins/codex` and `plugins/claude` are generated from one canonical source.
-Specialist identity always comes from the platform tool result, never from
-the specialist's own prose.
+Specialist identity always comes from the platform response, never from the
+specialist's own prose.
+
+Codex loops bind `approvalPolicy=never`, `sandbox=danger-full-access` on
+specialist thread start/resume, and `sandboxPolicy.type=dangerFullAccess` on
+every turn start. The transport checks
+managed requirements and verifies the effective response before it sends the
+specialist prompt; a rejected or downgraded profile stops the loop instead of
+falling back to the Desktop `create_thread` default. This is intentionally
+broad local authority. Run orchestrated Codex loops only in trusted worktrees;
+review gates and role boundaries remain contractual rather than sandbox
+boundaries. Because standalone App Server tasks do not receive the Desktop-only
+`send_message_to_thread` tool, Convergo injects `convergo_callback` and relays
+its payload as a structured event on the attached transport session.
 
 On Claude Code there is a third option: the same loops with a split-engine
 routing — see [Hybrid Loops](#hybrid-loops-fable-plans-codex-builds).
@@ -247,15 +259,14 @@ from its own tool results — codex-side spawns (real since codex shipped
 collaboration subagents) reach the orchestrator only as self-reported
 relay text, so they promote but never exit.
 
-**Codex specialists run with the user's own permissions.** Convergo is a
-developer tool: it passes no sandbox or permission flags and manages no
-permissions. `codex exec` sessions resolve their capabilities from the
-user's codex configuration, exactly as a shell would, and Claude-side
-agents run under the user's Claude Code permission settings. The loop's
-protection is contractual — review gates, git reversibility, and
-phase-gated external side effects — and role boundaries (reviewers do not
-modify the repo) are contract lines in the role skills. The relay-wrapper
-mechanics are regression-tested by the
+**Hybrid Codex CLI specialists use the user's own permissions.** Unlike the
+native Codex loop transport above, the Claude-only hybrid wrapper passes no
+sandbox or permission flags. Its `codex exec` sessions resolve capabilities
+from the user's Codex configuration, and Claude-side agents run under the
+user's Claude Code permission settings. The loop's protection is contractual
+— review gates, git reversibility, and phase-gated external side effects — and
+role boundaries (reviewers do not modify the repo) are contract lines in the
+role skills. The relay-wrapper mechanics are regression-tested by the
 [wrapper-behavior evals](evals/wrapper-behavior/README.md).
 
 **Prerequisites.** A working, logged-in `codex` CLI with the convergo codex

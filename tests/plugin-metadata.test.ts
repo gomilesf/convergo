@@ -53,17 +53,23 @@ function listFiles(relativeRoot: string): string[] {
 }
 
 const PROTOCOL_REFERENCE_FILE = path.join("references", "cvg-multi-session-protocol.md")
+const CODEX_TRANSPORT_FILE = path.join("scripts", "codex-app-server-transport.mjs")
 
 function expectSkillCopyMatchesSource(skillName: string, targetRoot: string, platform?: Platform): void {
   const sourceRoot = path.join(PLATFORM_SKILL_ROOTS.source, skillName)
   const targetSkillRoot = path.join(targetRoot, skillName)
   const sourceFiles = listFiles(sourceRoot)
+  const copiedSourceFiles = skillName === "cvg-multi-session" && platform !== "codex"
+    ? sourceFiles.filter((file) => file !== CODEX_TRANSPORT_FILE)
+    : sourceFiles
   const generatesProtocolReference =
     platform !== undefined && (PROTOCOL_CONSUMER_SKILLS as readonly string[]).includes(skillName)
-  const expectedFiles = generatesProtocolReference ? [...sourceFiles, PROTOCOL_REFERENCE_FILE].sort() : sourceFiles
+  const generatedFiles = generatesProtocolReference ? [PROTOCOL_REFERENCE_FILE] : []
+  if (platform === "codex" && generatesProtocolReference) generatedFiles.push(CODEX_TRANSPORT_FILE)
+  const expectedFiles = [...copiedSourceFiles, ...generatedFiles].sort()
 
   expect(listFiles(targetSkillRoot), targetSkillRoot).toEqual(expectedFiles)
-  for (const file of sourceFiles) {
+  for (const file of copiedSourceFiles) {
     const sourceContent = readFileSync(path.join(ROOT, sourceRoot, file), "utf8")
     const targetContent = readFileSync(path.join(ROOT, targetSkillRoot, file), "utf8")
     const expected =

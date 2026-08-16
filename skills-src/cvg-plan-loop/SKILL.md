@@ -44,8 +44,9 @@ record the id returned by the tool. Verify it per Gate 1; if it is not
 verifiable, do not continue.
 
 <!-- codex -->
-(Codex) After verification, send the planner its verified thread id before
-creating the heartbeat.
+(Codex) Include the protocol's `<specialist-thread-id>` identity line in the
+planner prompt. The App Server transport replaces it before turn start; after
+`read_thread` verification, confirm the ids match before creating the heartbeat.
 <!-- /codex -->
 
 Planner prompt must include:

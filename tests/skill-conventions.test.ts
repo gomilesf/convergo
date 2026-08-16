@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test"
-import { readdirSync, readFileSync } from "node:fs"
+import { existsSync, readdirSync, readFileSync } from "node:fs"
 import path from "node:path"
 import { PLATFORM_SKILL_ROOTS } from "../src/metadata"
 import { PROTOCOL_CONSUMER_SKILLS, stripPlatform, type Platform } from "../src/platform-content"
@@ -293,7 +293,7 @@ describe("skill conventions", () => {
     for (const relativeRoot of [PLATFORM_SKILL_ROOTS.source, PLATFORM_SKILL_ROOTS.codex]) {
       const skillContent = readFileSync(path.join(ROOT, relativeRoot, "cvg-build-loop", "SKILL.md"), "utf8")
 
-      expect(skillContent, relativeRoot).toContain("After verifying the reviewer thread with `read_thread`, send the")
+      expect(skillContent, relativeRoot).toContain("The App Server transport replaces it before turn start")
     }
 
     const claudeContent = readFileSync(path.join(ROOT, PLATFORM_SKILL_ROOTS.claude, "cvg-build-loop", "SKILL.md"), "utf8")
@@ -325,6 +325,35 @@ describe("skill conventions", () => {
         expect(content, referencePath).toContain("# Multi-Session Protocol Reference")
         expect(contentAfterMarker(content, "## Non-Negotiable Protocol Gates"), referencePath).toBe(canonical)
       }
+    }
+  })
+
+  test("Codex loop skills ship the canonical App Server transport", () => {
+    const sourcePath = path.join(
+      ROOT,
+      PLATFORM_SKILL_ROOTS.source,
+      "cvg-multi-session/scripts/codex-app-server-transport.mjs",
+    )
+    const canonical = readFileSync(sourcePath, "utf8")
+
+    for (const skill of ["cvg-multi-session", ...PROTOCOL_CONSUMER_SKILLS]) {
+      const transportPath = path.join(
+        ROOT,
+        PLATFORM_SKILL_ROOTS.codex,
+        skill,
+        "scripts/codex-app-server-transport.mjs",
+      )
+      expect(readFileSync(transportPath, "utf8"), transportPath).toBe(canonical)
+    }
+
+    for (const skill of ["cvg-multi-session", ...PROTOCOL_CONSUMER_SKILLS]) {
+      const transportPath = path.join(
+        ROOT,
+        PLATFORM_SKILL_ROOTS.claude,
+        skill,
+        "scripts/codex-app-server-transport.mjs",
+      )
+      expect(existsSync(transportPath), transportPath).toBe(false)
     }
   })
 
@@ -385,8 +414,18 @@ describe("skill conventions", () => {
 
     for (const requiredText of [
       "### Gate 0: Transport Binding",
-      "| Spawn specialist | `create_thread` | `Agent` tool with `run_in_background: true` |",
-      "| Continue specialist | `send_message_to_thread` | `SendMessage` to the agent id |",
+      "| Spawn specialist | skill-local App Server transport `start` | `Agent` tool with `run_in_background: true` |",
+      "| Continue specialist | skill-local App Server transport `resume` | `SendMessage` to the agent id |",
+      "scripts/codex-app-server-transport.mjs",
+      "The transport checks managed requirements",
+      "Do not fall back to `create_thread`",
+      "`sandbox=danger-full-access`",
+      "`sandboxPolicy.type=dangerFullAccess`",
+      "--require-callback",
+      "`convergo_callback`",
+      "`specialist_callback`",
+      "read that session once with `write_stdin`",
+      "The `thread_started` transport event contains the",
       "the harness re-invokes the orchestrator on `<task-notification>`",
       "resumed from its\npersisted transcript when continued with `SendMessage`",
       "do not flatten a specialist's internal delegation into\nthe orchestrator",
@@ -396,9 +435,9 @@ describe("skill conventions", () => {
       "Your verified thread id is <specialist-thread-id>",
       "Do not use local shell jobs, detached processes, or inline role-play in the orchestrator turn as substitutes for a real specialist session.",
       "stop the workflow and retry with the platform specialist tools or report a tool-layer blocker.",
-      "the specialist must send its callback to the orchestrator thread",
+      "specialist must call `convergo_callback` exactly once",
       "If the specialist creates or receives an audit artifact, the callback must include `Audit artifact: <absolute path>`.",
-      "Destination orchestrator Codex thread id: <orchestrator-thread-id>",
+      "Callback destination: the attached Convergo App Server transport.",
       "Do not emulate waiting with `sleep`, repeated reads, shell loops, timers, or repeated status checks in the same assistant turn — on either platform.",
       "do not replace the missing heartbeat with manual polling.",
       "Same-reviewer pass is never the final exit condition.",

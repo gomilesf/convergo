@@ -19,15 +19,44 @@ Bind the specialist operations to the current platform before applying any other
 
 | Operation | Codex | Claude Code |
 |---|---|---|
-| Spawn specialist | `create_thread` | `Agent` tool with `run_in_background: true` |
-| Continue specialist | `send_message_to_thread` | `SendMessage` to the agent id |
+| Spawn specialist | skill-local App Server transport `start` | `Agent` tool with `run_in_background: true` |
+| Continue specialist | skill-local App Server transport `resume` | `SendMessage` to the agent id |
 | Verify identity | `read_thread` on the returned thread id | agent id in the `Agent` tool result |
 | Inspect output | `read_thread` | `TaskOutput` or the completion notification |
 | Wait | heartbeat automation | end the turn; the harness re-invokes the orchestrator on `<task-notification>` |
 
-The authoritative specialist identity is always the id returned by the platform
-tool — never an id the specialist writes in prose. Do not accept placeholder
-specialist identity in callback templates.
+The authoritative specialist identity is always the id returned by the
+platform transport — never an id the specialist writes in prose. Do not accept
+placeholder specialist identity in callback templates.
+
+On Codex, locate `scripts/codex-app-server-transport.mjs` beside the active
+skill. Loop skills ship an identical generated copy. Before each spawn or
+continue, write the exact specialist prompt to a file inside the current loop's
+scratch directory, including this line:
+`Your verified thread id is <specialist-thread-id>.` The transport replaces that
+placeholder with the id returned by App Server before starting the turn.
+
+Run the transport with `exec_command` from the specialist worktree and a short
+yield so the command returns its live execution session after the
+`thread_started` event:
+
+```text
+node <transport-script> start --cwd <worktree> --prompt-file <prompt-file> --require-callback
+node <transport-script> resume --thread-id <specialist-thread-id> --cwd <worktree> --prompt-file <prompt-file> --require-callback
+```
+
+Add `--model <id>` or `--effort <level>` only when the user explicitly selected
+an override. Never use `--ephemeral` for a real specialist.
+
+The transport checks managed requirements, explicitly requests
+`approvalPolicy=never` plus `sandbox=danger-full-access` on thread start or
+resume, then repeats the effective policy as
+`sandboxPolicy.type=dangerFullAccess` on turn start. It verifies the effective
+thread response before sending the prompt. If any check fails, stop with a
+transport blocker. Do not fall back to `create_thread`: its current tool
+contract cannot bind permissions and may silently downgrade a cross-project
+specialist. It also exposes `convergo_callback` as a dynamic tool and prints
+its payload as a `specialist_callback` event on the attached execution session.
 
 If the transport tools are not available after searching for them, report a
 tool-layer blocker. Do not fall back to inline simulation of a specialist.
@@ -45,11 +74,13 @@ Codex threads or Claude Code background agents.
 - If the id returned by the spawn operation cannot be verified, stop the workflow and retry with the platform specialist tools or report a tool-layer blocker.
 - If the platform specialist tools are not loaded, search for them first. If they still cannot be loaded, report a tool-layer blocker.
 
-(Codex) The specialist tools to search for are `create_thread`,
-`send_message_to_thread`, and `read_thread`. For a newly created specialist,
-send a short identity note after `read_thread` succeeds:
-`Your verified thread id is <specialist-thread-id>. Use this
-exact id in callbacks.`
+(Codex) Search for `exec_command`, `write_stdin`, `read_thread`, and the
+heartbeat automation tool. The `thread_started` transport event contains the
+authoritative thread id. Verify it immediately with `read_thread`; the prompt
+already contains the same id because the transport replaces
+`<specialist-thread-id>` before turn start. The attached transport process is
+only a client for the real App Server thread; its process or execution-session
+id is never the specialist identity.
 
 ### Gate 2: Orchestrator Callback Transport
 
@@ -61,17 +92,17 @@ Every specialist prompt must include:
   creates or receives an audit artifact.
 - (Codex) fallback instruction if callback transport is unavailable.
 
-On Codex, the callback destination is the orchestrator thread id, and
-the specialist must send its callback to the orchestrator thread with
-`send_message_to_thread`; a final answer left only in the specialist thread is
-not sufficient.
+On Codex, the callback destination is the attached App Server transport. The
+specialist must call `convergo_callback` exactly once with the complete callback
+text. The transport prints a `specialist_callback` event to its execution
+session; a final answer left only in the specialist thread is not sufficient.
 
 If the specialist creates or receives an audit artifact, the callback must include `Audit artifact: <absolute path>`.
 
 The specialist must use the verified id supplied by the orchestrator in its
 callback body.
 
-(Codex) If `send_message_to_thread` is unavailable inside the specialist thread, the specialist must say `callback transport failed` in its final answer and include the exact callback text for manual relay.
+(Codex) If `convergo_callback` is unavailable inside the specialist thread, the specialist must say `callback transport failed` in its final answer and include the exact callback text for manual relay. The required-callback transport exits nonzero so the orchestrator treats this as a blocker.
 
 The orchestrator treats the phase as pending until the callback is visible.
 
@@ -86,9 +117,12 @@ Handoff sequence:
 3. Tell the user the specialist id.
 4. End the active turn and let the platform deliver the callback.
 
-(Codex) Between steps 2 and 3, send the verified thread id to newly created
-specialists, then create or update a heartbeat automation for the current
-orchestrator thread; include the heartbeat id when telling the user.
+(Codex) Between steps 2 and 3, confirm the transport-injected id matches the
+`read_thread` result, then create or update a heartbeat automation for the
+current orchestrator thread; include the heartbeat id when telling the user.
+Retain the live `exec_command` session id as the callback destination. On a
+heartbeat turn, read that session once with `write_stdin` and confirm the
+`specialist_callback` event against `read_thread`; do not poll either source.
 
 Do not emulate waiting with `sleep`, repeated reads, shell loops, timers, or repeated status checks in the same assistant turn — on either platform.
 
@@ -222,12 +256,13 @@ Do not include:
 Callback transport block (Codex):
 
 ```text
-Destination orchestrator Codex thread id: <orchestrator-thread-id>
+Callback destination: the attached Convergo App Server transport.
 
-When complete or blocked, send the callback to that thread with send_message_to_thread.
+When complete or blocked, call convergo_callback exactly once with this input:
+{"callback":"<the exact callback text required below>"}
 If you create or receive an audit artifact, include this line in the callback:
 Audit artifact: <absolute path>
-If send_message_to_thread is unavailable, write "callback transport failed" and include the exact callback text in your final answer.
+If convergo_callback is unavailable, write "callback transport failed" and include the exact callback text in your final answer.
 ```
 
 ## Heartbeat Prompt Checklist (Codex only)
@@ -235,6 +270,7 @@ If send_message_to_thread is unavailable, write "callback transport failed" and 
 Heartbeat prompts should say:
 
 - which specialist thread to check,
+- which attached execution-session id carries `specialist_callback`,
 - what callback shape to detect,
 - whether the actor completed the role-specific feedback intake,
 - if still active, report one short status and continue waiting,

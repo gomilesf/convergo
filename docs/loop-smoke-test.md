@@ -60,9 +60,28 @@ result (never from specialist prose). Expected cost: ~5 subagent runs of
 
 ## Codex equivalent
 
-The same scenario runs on Codex by substituting the Gate 0 Codex column:
-`create_thread` / `send_message_to_thread` / `read_thread` plus heartbeat
-waiting instead of task notifications.
+The same scenario runs on Codex through the skill-local
+`scripts/codex-app-server-transport.mjs` client:
+
+1. Write each specialist prompt under the loop scratch directory.
+2. Launch `start` through `exec_command` with a short yield and capture the
+   `threadId` from its `thread_started` JSON event.
+3. Verify the id with `read_thread`; confirm the transport event reports
+   `approvalPolicy: never` and effective `sandbox: dangerFullAccess` (the
+   thread request uses `sandbox: danger-full-access`).
+4. Continue the worker or reviewer with the transport's `resume` operation,
+   using the same thread id and worktree.
+5. Confirm the specialist calls `convergo_callback` and the attached execution
+   session prints one `specialist_callback` event with the exact callback text.
+6. Use heartbeat waiting instead of task notifications; each wake-up reads the
+   execution session and thread at most once.
+
+Pass: every start and resume returns the same explicit full-access settings,
+the specialist runs without command approvals, `read_thread` observes the
+real persisted thread, and callback/fresh-review semantics match the Claude
+phases above. A managed-policy rejection or downgraded App Server response
+must fail before `turn/start`; a missing required callback must also fail the
+transport.
 
 ## Hybrid transport (codex wrapper + orchestrator watcher)
 

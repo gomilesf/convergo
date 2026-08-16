@@ -35,11 +35,19 @@ async function assertSourceSkill(skill: string): Promise<void> {
   }
 }
 
-async function copySkill(skill: string, targetRoot: string): Promise<void> {
+async function copySkill(
+  skill: string,
+  targetRoot: string,
+  platform: Platform | undefined,
+): Promise<void> {
   await assertSourceSkill(skill)
-  await fs.cp(path.join(ROOT, PLATFORM_SKILL_ROOTS.source, skill), path.join(ROOT, targetRoot, skill), {
+  const targetPath = path.join(ROOT, targetRoot, skill)
+  await fs.cp(path.join(ROOT, PLATFORM_SKILL_ROOTS.source, skill), targetPath, {
     recursive: true,
   })
+  if (skill === "cvg-multi-session" && platform !== "codex") {
+    await fs.rm(path.join(targetPath, "scripts"), { recursive: true, force: true })
+  }
 }
 
 async function listMarkdownFiles(rootPath: string): Promise<string[]> {
@@ -68,6 +76,13 @@ async function writeProtocolReferences(targetRoot: string, platform: Platform): 
     path.join(ROOT, PLATFORM_SKILL_ROOTS.source, "cvg-multi-session", "SKILL.md"),
     "utf8",
   )
+  const codexTransportSource = path.join(
+    ROOT,
+    PLATFORM_SKILL_ROOTS.source,
+    "cvg-multi-session",
+    "scripts",
+    "codex-app-server-transport.mjs",
+  )
 
   for (const consumer of PROTOCOL_CONSUMER_SKILLS) {
     const referencesDir = path.join(ROOT, targetRoot, consumer, "references")
@@ -76,6 +91,14 @@ async function writeProtocolReferences(targetRoot: string, platform: Platform): 
       path.join(referencesDir, "cvg-multi-session-protocol.md"),
       stripPlatform(renderProtocolReference(canonical, consumer), platform),
     )
+    if (platform === "codex") {
+      const scriptsDir = path.join(ROOT, targetRoot, consumer, "scripts")
+      await fs.mkdir(scriptsDir, { recursive: true })
+      await fs.copyFile(
+        codexTransportSource,
+        path.join(scriptsDir, "codex-app-server-transport.mjs"),
+      )
+    }
   }
 }
 
@@ -85,7 +108,7 @@ for (const platform of PLATFORMS) {
   await fs.mkdir(targetRoot, { recursive: true })
 
   for (const skill of platform.skills) {
-    await copySkill(skill, platform.target)
+    await copySkill(skill, platform.target, platform.platform)
   }
 
   await applyPlatformContent(targetRoot, platform.platform)

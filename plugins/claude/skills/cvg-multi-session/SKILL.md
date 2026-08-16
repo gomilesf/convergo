@@ -23,15 +23,15 @@ Bind the specialist operations to the current platform before applying any other
 
 | Operation | Codex | Claude Code |
 |---|---|---|
-| Spawn specialist | `create_thread` | `Agent` tool with `run_in_background: true` |
-| Continue specialist | `send_message_to_thread` | `SendMessage` to the agent id |
+| Spawn specialist | skill-local App Server transport `start` | `Agent` tool with `run_in_background: true` |
+| Continue specialist | skill-local App Server transport `resume` | `SendMessage` to the agent id |
 | Verify identity | `read_thread` on the returned thread id | agent id in the `Agent` tool result |
 | Inspect output | `read_thread` | `TaskOutput` or the completion notification |
 | Wait | heartbeat automation | end the turn; the harness re-invokes the orchestrator on `<task-notification>` |
 
-The authoritative specialist identity is always the id returned by the platform
-tool — never an id the specialist writes in prose. Do not accept placeholder
-specialist identity in callback templates.
+The authoritative specialist identity is always the id returned by the
+platform transport — never an id the specialist writes in prose. Do not accept
+placeholder specialist identity in callback templates.
 
 On Claude Code, background specialists can spawn their own subagents (auxiliary
 reviewers, researchers), and a completed specialist is resumed from its
