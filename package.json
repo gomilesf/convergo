@@ -1,6 +1,6 @@
 {
   "name": "convergo",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "description": "Disciplined software engineering for coding agents: plan, build, and review in bounded loops until an independent fresh reviewer signs off",
   "type": "module",
   "private": true,

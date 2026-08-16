@@ -6,7 +6,7 @@
   },
   "metadata": {
     "description": "Plugin marketplace for the Convergo workflow skills",
-    "version": "0.5.0"
+    "version": "0.5.1"
   },
   "plugins": [
     {

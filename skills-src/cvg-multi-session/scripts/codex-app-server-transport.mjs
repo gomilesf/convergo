@@ -307,7 +307,7 @@ async function main() {
       clientInfo: {
         name: "convergo",
         title: "Convergo",
-        version: "0.5.0",
+        version: "0.5.1",
       },
       capabilities: { experimentalApi: true },
     })
