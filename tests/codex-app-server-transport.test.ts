@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test"
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs"
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import path from "node:path"
 import { spawnSync } from "node:child_process"
@@ -33,7 +33,7 @@ function runTransport(args: string[], scenario = "success") {
       FAKE_CODEX_TRACE: traceFile,
     },
   })
-  const trace = readFileSync(traceFile, "utf8")
+  const trace = (existsSync(traceFile) ? readFileSync(traceFile, "utf8") : "")
     .trim()
     .split("\n")
     .filter(Boolean)
@@ -54,9 +54,11 @@ describe("Codex App Server specialist transport", () => {
     expect(result.stderr).toBe("")
     expect(result.stdout).toContain('"event":"thread_started"')
     expect(result.stdout).toContain('"event":"turn_completed"')
+    expect(result.stdout).toContain('"event":"thread_handoff_ready"')
 
     const initialize = trace.find((message) => message.method === "initialize")
     expect(initialize.params.capabilities).toEqual({ experimentalApi: true })
+    expect(initialize.params.clientInfo.version).toBe("0.5.2")
     const start = trace.find((message) => message.method === "thread/start")
     expect(start.params).toMatchObject({
       cwd: "/tmp/project",
@@ -80,33 +82,22 @@ describe("Codex App Server specialist transport", () => {
     })
     expect(turn.params.input[0].text).toContain("thread-full-access")
     expect(turn.params.input[0].text).not.toContain("<specialist-thread-id>")
+    const unsubscribe = trace.find((message) => message.method === "thread/unsubscribe")
+    expect(unsubscribe.params).toEqual({ threadId: "thread-full-access" })
+    expect(trace.at(-1).method).toBe("thread/unsubscribe")
   })
 
-  test("rebinds full access when resuming the same thread", () => {
+  test("rejects App Server resume so Desktop remains the only later writer", () => {
     const { result, trace } = runTransport([
       "resume",
       "--thread-id", "thread-existing",
       "--cwd", "/tmp/project",
     ])
 
-    expect(result.status).toBe(0)
-    const resume = trace.find((message) => message.method === "thread/resume")
-    expect(resume.params).toMatchObject({
-      threadId: "thread-existing",
-      cwd: "/tmp/project",
-      approvalPolicy: "never",
-      sandbox: "danger-full-access",
-    })
-    expect(resume.params.dynamicTools[0]).toMatchObject({
-      type: "function",
-      name: "convergo_callback",
-    })
-    const turn = trace.find((message) => message.method === "turn/start")
-    expect(turn.params).toMatchObject({
-      threadId: "thread-existing",
-      approvalPolicy: "never",
-      sandboxPolicy: { type: "dangerFullAccess" },
-    })
+    expect(result.status).toBe(1)
+    expect(result.stderr).toContain('Expected operation "start"')
+    expect(result.stderr).toContain("send_message_to_thread")
+    expect(trace).toEqual([])
   })
 
   test("fails before creating a thread when managed requirements forbid full access", () => {
@@ -151,12 +142,13 @@ describe("Codex App Server specialist transport", () => {
     expect(result.status).toBe(0)
     expect(result.stdout).toContain('"event":"specialist_callback"')
     expect(result.stdout).toContain("STATUS: complete")
+    expect(result.stdout).toContain('"event":"thread_handoff_ready"')
     const response = trace.find((message) => message.id === "server-callback" && !message.method)
     expect(response.result).toMatchObject({ success: true })
   })
 
   test("fails closed when a required callback is missing", () => {
-    const { result } = runTransport([
+    const { result, trace } = runTransport([
       "start",
       "--cwd", "/tmp/project",
       "--require-callback",
@@ -164,5 +156,18 @@ describe("Codex App Server specialist transport", () => {
 
     expect(result.status).toBe(1)
     expect(result.stderr).toContain("Expected exactly one convergo_callback call, received 0")
+    expect(trace.some((message) => message.method === "thread/unsubscribe")).toBe(true)
+    expect(result.stdout).not.toContain('"event":"thread_handoff_ready"')
+  })
+
+  test("does not hand off when App Server cannot unsubscribe", () => {
+    const { result } = runTransport([
+      "start",
+      "--cwd", "/tmp/project",
+    ], "unsubscribe-failure")
+
+    expect(result.status).toBe(1)
+    expect(result.stderr).toContain('thread/unsubscribe returned unexpected status "stillSubscribed"')
+    expect(result.stdout).not.toContain('"event":"thread_handoff_ready"')
   })
 })

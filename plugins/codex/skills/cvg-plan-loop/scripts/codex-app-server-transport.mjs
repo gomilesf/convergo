@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import { spawn } from "node:child_process"
+import { accessSync, constants } from "node:fs"
 import { readFile } from "node:fs/promises"
 import readline from "node:readline"
 
@@ -9,6 +10,8 @@ const SANDBOX_MODE = "danger-full-access"
 const SANDBOX_POLICY_TYPE = "dangerFullAccess"
 const CALLBACK_TOOL_NAME = "convergo_callback"
 const REQUEST_TIMEOUT_MS = 30_000
+const PROCESS_EXIT_TIMEOUT_MS = 5_000
+const DESKTOP_CODEX_BIN = "/Applications/ChatGPT.app/Contents/Resources/codex"
 
 const CALLBACK_TOOL = {
   type: "function",
@@ -32,14 +35,16 @@ function usage() {
   return [
     "Usage:",
     "  codex-app-server-transport.mjs start --cwd <path> --prompt-file <path> [--model <id>] [--effort <level>] [--require-callback] [--ephemeral]",
-    "  codex-app-server-transport.mjs resume --thread-id <id> --cwd <path> --prompt-file <path> [--model <id>] [--effort <level>] [--require-callback]",
+    "",
+    "Continue the returned thread with the Codex Desktop send_message_to_thread tool.",
+    "Starting a second App Server process to resume the thread is unsupported.",
   ].join("\n")
 }
 
 function parseArgs(argv) {
   const [operation, ...rest] = argv
-  if (operation !== "start" && operation !== "resume") {
-    throw new Error(`Expected operation "start" or "resume".\n${usage()}`)
+  if (operation !== "start") {
+    throw new Error(`Expected operation "start".\n${usage()}`)
   }
 
   const options = { operation, ephemeral: false, requireCallback: false }
@@ -68,9 +73,6 @@ function parseArgs(argv) {
       case "--prompt-file":
         options.promptFile = value
         break
-      case "--thread-id":
-        options.threadId = value
-        break
       case "--model":
         options.model = value
         break
@@ -84,18 +86,22 @@ function parseArgs(argv) {
 
   if (!options.cwd) throw new Error(`--cwd is required.\n${usage()}`)
   if (!options.promptFile) throw new Error(`--prompt-file is required.\n${usage()}`)
-  if (operation === "resume" && !options.threadId) {
-    throw new Error(`--thread-id is required for resume.\n${usage()}`)
-  }
-  if (operation === "resume" && options.ephemeral) {
-    throw new Error("--ephemeral is valid only for start")
-  }
 
   return options
 }
 
+function isExecutable(path) {
+  try {
+    accessSync(path, constants.X_OK)
+    return true
+  } catch {
+    return false
+  }
+}
+
 function commandParts() {
-  const binary = process.env.CONVERGO_CODEX_BIN || "codex"
+  const binary = process.env.CONVERGO_CODEX_BIN
+    || (process.platform === "darwin" && isExecutable(DESKTOP_CODEX_BIN) ? DESKTOP_CODEX_BIN : "codex")
   let prefix = []
   if (process.env.CONVERGO_CODEX_PREFIX_ARGS_JSON) {
     const parsed = JSON.parse(process.env.CONVERGO_CODEX_PREFIX_ARGS_JSON)
@@ -105,6 +111,20 @@ function commandParts() {
     prefix = parsed
   }
   return { binary, args: [...prefix, "app-server", "--stdio"] }
+}
+
+function waitForProcessExit(proc, timeoutMs) {
+  if (proc.exitCode !== null || proc.signalCode !== null) return Promise.resolve(true)
+  return new Promise((resolve) => {
+    const onExit = () => finish(true)
+    const timeout = setTimeout(() => finish(false), timeoutMs)
+    const finish = (exited) => {
+      clearTimeout(timeout)
+      proc.off("exit", onExit)
+      resolve(exited)
+    }
+    proc.once("exit", onExit)
+  })
 }
 
 class RpcClient {
@@ -231,13 +251,17 @@ class RpcClient {
     this.waiters = []
   }
 
-  close() {
+  async close() {
     if (this.disposed) return
     this.disposed = true
     this.closed = true
     this.lines.close()
     if (!this.proc.stdin.destroyed) this.proc.stdin.end()
-    if (this.proc.exitCode === null && !this.proc.killed) this.proc.kill("SIGTERM")
+    if (await waitForProcessExit(this.proc, PROCESS_EXIT_TIMEOUT_MS)) return
+
+    this.proc.kill("SIGTERM")
+    if (await waitForProcessExit(this.proc, PROCESS_EXIT_TIMEOUT_MS)) return
+    throw new Error("codex app-server did not exit after stdin closed and SIGTERM was sent")
   }
 }
 
@@ -274,6 +298,7 @@ async function main() {
   const rpc = new RpcClient(proc)
   const callbacks = []
   let activeThreadId
+  let handoff
 
   rpc.onRequest("item/tool/call", (params) => {
     if (params?.tool !== CALLBACK_TOOL_NAME || params?.namespace) {
@@ -307,7 +332,7 @@ async function main() {
       clientInfo: {
         name: "convergo",
         title: "Convergo",
-        version: "0.5.1",
+        version: "0.5.2",
       },
       capabilities: { experimentalApi: true },
     })
@@ -316,36 +341,20 @@ async function main() {
     const requirementsResult = await rpc.request("configRequirements/read", {})
     assertRequirementsAllowFullAccess(requirementsResult?.requirements)
 
-    let threadResult
-    if (options.operation === "start") {
-      const params = {
-        cwd: options.cwd,
-        approvalPolicy: APPROVAL_POLICY,
-        sandbox: SANDBOX_MODE,
-        serviceName: "convergo",
-        dynamicTools: [CALLBACK_TOOL],
-      }
-      if (options.model) params.model = options.model
-      if (options.ephemeral) params.ephemeral = true
-      threadResult = await rpc.request("thread/start", params)
-    } else {
-      const params = {
-        threadId: options.threadId,
-        cwd: options.cwd,
-        approvalPolicy: APPROVAL_POLICY,
-        sandbox: SANDBOX_MODE,
-        dynamicTools: [CALLBACK_TOOL],
-      }
-      if (options.model) params.model = options.model
-      threadResult = await rpc.request("thread/resume", params)
+    const params = {
+      cwd: options.cwd,
+      approvalPolicy: APPROVAL_POLICY,
+      sandbox: SANDBOX_MODE,
+      serviceName: "convergo",
+      dynamicTools: [CALLBACK_TOOL],
     }
+    if (options.model) params.model = options.model
+    if (options.ephemeral) params.ephemeral = true
+    const threadResult = await rpc.request("thread/start", params)
 
-    assertFullAccess(threadResult, `thread/${options.operation}`)
+    assertFullAccess(threadResult, "thread/start")
     const threadId = threadResult?.thread?.id
-    if (!threadId) throw new Error(`thread/${options.operation} did not return a thread id`)
-    if (options.operation === "resume" && threadId !== options.threadId) {
-      throw new Error(`thread/resume returned unexpected thread id ${threadId}`)
-    }
+    if (!threadId) throw new Error("thread/start did not return a thread id")
     activeThreadId = threadId
 
     const completed = rpc.waitFor(
@@ -381,11 +390,22 @@ async function main() {
       const detail = completedParams?.turn?.error?.message ?? `status=${JSON.stringify(status)}`
       throw new Error(`Codex turn did not complete successfully: ${detail}`)
     }
+
+    const unsubscribe = await rpc.request("thread/unsubscribe", { threadId })
+    const unsubscribeStatus = unsubscribe?.status
+    if (!["unsubscribed", "notSubscribed", "notLoaded"].includes(unsubscribeStatus)) {
+      throw new Error(`thread/unsubscribe returned unexpected status ${JSON.stringify(unsubscribeStatus)}`)
+    }
     if (options.requireCallback && callbacks.length !== 1) {
       throw new Error(`Expected exactly one ${CALLBACK_TOOL_NAME} call, received ${callbacks.length}`)
     }
+    handoff = { threadId, turnId, unsubscribeStatus }
   } finally {
-    rpc.close()
+    await rpc.close()
+  }
+
+  if (handoff) {
+    console.log(JSON.stringify({ event: "thread_handoff_ready", ...handoff }))
   }
 }
 

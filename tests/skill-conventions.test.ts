@@ -294,6 +294,7 @@ describe("skill conventions", () => {
       const skillContent = readFileSync(path.join(ROOT, relativeRoot, "cvg-build-loop", "SKILL.md"), "utf8")
 
       expect(skillContent, relativeRoot).toContain("The App Server transport replaces it before turn start")
+      expect(skillContent, relativeRoot).toContain("After\n`thread_handoff_ready`, verify with `read_thread` that the ids match")
     }
 
     const claudeContent = readFileSync(path.join(ROOT, PLATFORM_SKILL_ROOTS.claude, "cvg-build-loop", "SKILL.md"), "utf8")
@@ -380,7 +381,8 @@ describe("skill conventions", () => {
       "utf8",
     )
     expect(codexProtocol).toContain("Heartbeat Prompt Checklist")
-    expect(codexProtocol).toContain("Callback transport block (Codex):")
+    expect(codexProtocol).toContain("Bootstrap callback transport block (Codex `start` only):")
+    expect(codexProtocol).toContain("Native continuation callback transport block (Codex")
     expect(codexProtocol).not.toContain("You are a background specialist agent.")
     expect(codexProtocol).not.toContain("persisted transcript")
   })
@@ -415,7 +417,7 @@ describe("skill conventions", () => {
     for (const requiredText of [
       "### Gate 0: Transport Binding",
       "| Spawn specialist | skill-local App Server transport `start` | `Agent` tool with `run_in_background: true` |",
-      "| Continue specialist | skill-local App Server transport `resume` | `SendMessage` to the agent id |",
+      "| Continue specialist | Desktop `send_message_to_thread` on the same thread id | `SendMessage` to the agent id |",
       "scripts/codex-app-server-transport.mjs",
       "The transport checks managed requirements",
       "Do not fall back to `create_thread`",
@@ -424,20 +426,26 @@ describe("skill conventions", () => {
       "--require-callback",
       "`convergo_callback`",
       "`specialist_callback`",
-      "read that session once with `write_stdin`",
+      "`thread_handoff_ready`",
+      "`thread/unsubscribe`",
+      "`wait_threads`",
+      "Do not create a heartbeat for native continuations",
       "The `thread_started` transport event contains the",
       "the harness re-invokes the orchestrator on `<task-notification>`",
       "resumed from its\npersisted transcript when continued with `SendMessage`",
       "do not flatten a specialist's internal delegation into\nthe orchestrator",
       "Spawn a new specialist with the spawn operation unless the user explicitly named an existing specialist session.",
       "Continue an existing specialist with the continue operation.",
-      "Verify every specialist id immediately after creation or selection",
+      "Verify every specialist id before its first continuation",
       "Your verified thread id is <specialist-thread-id>",
       "Do not use local shell jobs, detached processes, or inline role-play in the orchestrator turn as substitutes for a real specialist session.",
       "stop the workflow and retry with the platform specialist tools or report a tool-layer blocker.",
-      "specialist must call `convergo_callback` exactly once",
+      "newly spawned specialist calls `convergo_callback` exactly once",
+      "continued specialist returns the exact callback text as its final answer",
+      "It must not call\n  `convergo_callback`",
       "If the specialist creates or receives an audit artifact, the callback must include `Audit artifact: <absolute path>`.",
       "Callback destination: the attached Convergo App Server transport.",
+      "Callback destination: your final answer in this same Codex task.",
       "Do not emulate waiting with `sleep`, repeated reads, shell loops, timers, or repeated status checks in the same assistant turn — on either platform.",
       "do not replace the missing heartbeat with manual polling.",
       "Same-reviewer pass is never the final exit condition.",

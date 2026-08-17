@@ -206,25 +206,31 @@ discuss goal
 ```
 
 The loop skills share one protocol (`cvg-multi-session`), bound to the host
-platform before anything else runs: specialists are Codex App Server threads
-(dynamic-tool callbacks via the attached transport, heartbeat waiting) or Claude Code
-background agents (final-message callbacks, task-notification waiting). Each
+platform before anything else runs: Codex specialists are top-level Desktop
+tasks bootstrapped once through App Server and continued through Desktop's
+native task transport; Claude Code specialists are background agents. Each
 platform's build ships only its own transport mechanics — the copies under
 `plugins/codex` and `plugins/claude` are generated from one canonical source.
 Specialist identity always comes from the platform response, never from the
-specialist's own prose.
+specialist's own prose. Repair rounds reuse the same worker, focused re-reviews
+reuse the same reviewer, and only a full fresh review creates a new task.
 
 Codex loops bind `approvalPolicy=never`, `sandbox=danger-full-access` on
-specialist thread start/resume, and `sandboxPolicy.type=dangerFullAccess` on
-every turn start. The transport checks
-managed requirements and verifies the effective response before it sends the
-specialist prompt; a rejected or downgraded profile stops the loop instead of
-falling back to the Desktop `create_thread` default. This is intentionally
-broad local authority. Run orchestrated Codex loops only in trusted worktrees;
-review gates and role boundaries remain contractual rather than sandbox
-boundaries. Because standalone App Server tasks do not receive the Desktop-only
-`send_message_to_thread` tool, Convergo injects `convergo_callback` and relays
-its payload as a structured event on the attached transport session.
+specialist thread start and `sandboxPolicy.type=dangerFullAccess` on the
+bootstrap turn. The transport checks managed requirements and verifies the
+effective response before it sends the specialist prompt; a rejected or
+downgraded profile stops the loop instead of falling back to the Desktop
+`create_thread` default. On macOS it prefers the Codex binary bundled with
+ChatGPT Desktop over a possibly stale CLI on `PATH`.
+
+After the bootstrap callback, the transport unsubscribes, closes its App Server,
+and emits `thread_handoff_ready`. Every later repair or focused review uses
+Desktop `send_message_to_thread` and `wait_threads` on that same task. Convergo
+never starts a second App Server writer to resume it. The bootstrap turn uses
+the injected `convergo_callback`; native continuations return the exact callback
+as their final task answer. Full Access is intentionally broad local authority:
+run orchestrated Codex loops only in trusted worktrees. Review gates and role
+boundaries remain contractual rather than sandbox boundaries.
 
 On Claude Code there is a third option: the same loops with a split-engine
 routing — see [Hybrid Loops](#hybrid-loops-fable-plans-codex-builds).

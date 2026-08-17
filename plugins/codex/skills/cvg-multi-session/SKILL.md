@@ -24,43 +24,52 @@ Bind the specialist operations to the current platform before applying any other
 | Operation | Codex | Claude Code |
 |---|---|---|
 | Spawn specialist | skill-local App Server transport `start` | `Agent` tool with `run_in_background: true` |
-| Continue specialist | skill-local App Server transport `resume` | `SendMessage` to the agent id |
-| Verify identity | `read_thread` on the returned thread id | agent id in the `Agent` tool result |
-| Inspect output | `read_thread` | `TaskOutput` or the completion notification |
-| Wait | heartbeat automation | end the turn; the harness re-invokes the orchestrator on `<task-notification>` |
+| Continue specialist | Desktop `send_message_to_thread` on the same thread id | `SendMessage` to the agent id |
+| Verify identity | `read_thread` after bootstrap handoff | agent id in the `Agent` tool result |
+| Inspect output | `wait_threads` and `read_thread` | `TaskOutput` or the completion notification |
+| Wait | attached bootstrap session, then `wait_threads` | end the turn; the harness re-invokes the orchestrator on `<task-notification>` |
 
 The authoritative specialist identity is always the id returned by the
 platform transport — never an id the specialist writes in prose. Do not accept
 placeholder specialist identity in callback templates.
 
 On Codex, locate `scripts/codex-app-server-transport.mjs` beside the active
-skill. Loop skills ship an identical generated copy. Before each spawn or
-continue, write the exact specialist prompt to a file inside the current loop's
-scratch directory, including this line:
+skill. Loop skills ship an identical generated copy. Before each spawn, write
+the exact specialist prompt to a file inside the current loop's scratch
+directory, including this line:
 `Your verified thread id is <specialist-thread-id>.` The transport replaces that
 placeholder with the id returned by App Server before starting the turn.
 
-Run the transport with `exec_command` from the specialist worktree and a short
-yield so the command returns its live execution session after the
+Run the transport once with `exec_command` from the specialist worktree and a
+short yield so the command returns its live execution session after the
 `thread_started` event:
 
 ```text
 node <transport-script> start --cwd <worktree> --prompt-file <prompt-file> --require-callback
-node <transport-script> resume --thread-id <specialist-thread-id> --cwd <worktree> --prompt-file <prompt-file> --require-callback
 ```
 
 Add `--model <id>` or `--effort <level>` only when the user explicitly selected
 an override. Never use `--ephemeral` for a real specialist.
 
 The transport checks managed requirements, explicitly requests
-`approvalPolicy=never` plus `sandbox=danger-full-access` on thread start or
-resume, then repeats the effective policy as
+`approvalPolicy=never` plus `sandbox=danger-full-access` on thread start, then
+repeats the effective policy as
 `sandboxPolicy.type=dangerFullAccess` on turn start. It verifies the effective
 thread response before sending the prompt. If any check fails, stop with a
 transport blocker. Do not fall back to `create_thread`: its current tool
 contract cannot bind permissions and may silently downgrade a cross-project
-specialist. It also exposes `convergo_callback` as a dynamic tool and prints
-its payload as a `specialist_callback` event on the attached execution session.
+specialist. On macOS it prefers the Codex binary bundled with ChatGPT Desktop
+over a possibly stale `codex` on `PATH`; `CONVERGO_CODEX_BIN` remains the
+explicit override.
+
+The bootstrap transport exposes `convergo_callback`, prints its payload as a
+`specialist_callback` event, calls `thread/unsubscribe`, closes its App Server,
+and emits `thread_handoff_ready` only after the child process exits. Do not
+continue the thread before that final event. Every later worker repair or
+same-reviewer focused check must use Desktop `send_message_to_thread` on the
+same thread id. Never launch a second App Server process or call this
+transport with `resume`: a second writer can collide with Desktop ownership of
+the persisted thread.
 
 If the transport tools are not available after searching for them, report a
 tool-layer blocker. Do not fall back to inline simulation of a specialist.
@@ -72,19 +81,21 @@ Codex threads or Claude Code background agents.
 
 - Spawn a new specialist with the spawn operation unless the user explicitly named an existing specialist session.
 - Continue an existing specialist with the continue operation.
-- Verify every specialist id immediately after creation or selection with the Gate 0 verify operation.
+- Verify every specialist id before its first continuation with the Gate 0 verify operation.
 - Do not use local shell jobs, detached processes, or inline role-play in the orchestrator turn as substitutes for a real specialist session.
 - Do not treat a process id, shell job id, or model-generated id as a specialist id.
 - If the id returned by the spawn operation cannot be verified, stop the workflow and retry with the platform specialist tools or report a tool-layer blocker.
 - If the platform specialist tools are not loaded, search for them first. If they still cannot be loaded, report a tool-layer blocker.
 
-(Codex) Search for `exec_command`, `write_stdin`, `read_thread`, and the
-heartbeat automation tool. The `thread_started` transport event contains the
-authoritative thread id. Verify it immediately with `read_thread`; the prompt
-already contains the same id because the transport replaces
-`<specialist-thread-id>` before turn start. The attached transport process is
-only a client for the real App Server thread; its process or execution-session
-id is never the specialist identity.
+(Codex) Search for `exec_command`, `write_stdin`, `send_message_to_thread`,
+`wait_threads`, `read_thread`, and the heartbeat automation tool. The `thread_started` transport event contains the authoritative thread id returned
+by App Server; the prompt contains the same id because the transport replaces
+`<specialist-thread-id>` before turn start. During the attached bootstrap turn,
+a Desktop read can transiently report `notLoaded` or `interrupted`; do not use
+that snapshot as the turn verdict. The transport's `turn_completed` result is
+authoritative until `thread_handoff_ready`. After handoff, verify the task with
+`read_thread` before the first Desktop continuation. The transport process and
+execution-session id are never the specialist identity.
 
 ### Gate 2: Orchestrator Callback Transport
 
@@ -94,19 +105,22 @@ Every specialist prompt must include:
 - exact callback template,
 - instruction to include `Audit artifact: <absolute path>` when the specialist
   creates or receives an audit artifact.
-- (Codex) fallback instruction if callback transport is unavailable.
 
-On Codex, the callback destination is the attached App Server transport. The
-specialist must call `convergo_callback` exactly once with the complete callback
-text. The transport prints a `specialist_callback` event to its execution
-session; a final answer left only in the specialist thread is not sufficient.
+On Codex, callback transport depends on the operation:
+
+- A newly spawned specialist calls `convergo_callback` exactly once. The
+  attached bootstrap transport prints a `specialist_callback` event.
+- A continued specialist returns the exact callback text as its final answer.
+  Desktop `wait_threads` delivers it to the orchestrator. It must not call
+  `convergo_callback`; that dynamic tool belonged to the closed bootstrap App
+  Server and no longer has an attached handler.
 
 If the specialist creates or receives an audit artifact, the callback must include `Audit artifact: <absolute path>`.
 
 The specialist must use the verified id supplied by the orchestrator in its
 callback body.
 
-(Codex) If `convergo_callback` is unavailable inside the specialist thread, the specialist must say `callback transport failed` in its final answer and include the exact callback text for manual relay. The required-callback transport exits nonzero so the orchestrator treats this as a blocker.
+(Codex) During bootstrap, if `convergo_callback` is unavailable, the specialist must say `callback transport failed` in its final answer and include the exact callback text for manual relay. The required-callback transport exits nonzero so the orchestrator treats this as a blocker.
 
 The orchestrator treats the phase as pending until the callback is visible.
 
@@ -121,12 +135,20 @@ Handoff sequence:
 3. Tell the user the specialist id.
 4. End the active turn and let the platform deliver the callback.
 
-(Codex) Between steps 2 and 3, confirm the transport-injected id matches the
-`read_thread` result, then create or update a heartbeat automation for the
-current orchestrator thread; include the heartbeat id when telling the user.
-Retain the live `exec_command` session id as the callback destination. On a
-heartbeat turn, read that session once with `write_stdin` and confirm the
-`specialist_callback` event against `read_thread`; do not poll either source.
+(Codex) For a bootstrap turn, retain the live `exec_command` session id and
+create or update a heartbeat automation for the current orchestrator thread;
+include the heartbeat id when telling the user. On a heartbeat turn, read that
+session once with `write_stdin`. Accept the bootstrap only after both
+`specialist_callback` and `thread_handoff_ready` are present, then verify the
+task with `read_thread`.
+
+For a continuation, call `send_message_to_thread` once with the existing
+specialist id and the continuation prompt, then use one bounded `wait_threads`
+call with the returned cursor as `afterCursor` when available. The task's final
+text is the callback. If the bounded wait times out while the task is still
+active, report one short status and end the turn; a later turn can wait again.
+Do not create a heartbeat for native continuations and do not invoke App Server
+`thread/resume`.
 
 Do not emulate waiting with `sleep`, repeated reads, shell loops, timers, or repeated status checks in the same assistant turn — on either platform.
 
@@ -246,7 +268,7 @@ Every specialist prompt must include:
 - task-specific external side-effect boundary, especially whether push, deploy,
   remote smoke checks, secrets, or external environment/data changes are allowed,
 - audit artifact callback line when the specialist creates or receives one,
-- exact callback transport block,
+- the operation-appropriate callback transport block,
 - exact callback template.
 
 Do not include:
@@ -257,7 +279,7 @@ Do not include:
 - old heartbeat payloads or previous phase instructions,
 - reviewer concerns unless this is a role-specific feedback prompt.
 
-Callback transport block (Codex):
+Bootstrap callback transport block (Codex `start` only):
 
 ```text
 Callback destination: the attached Convergo App Server transport.
@@ -269,17 +291,32 @@ Audit artifact: <absolute path>
 If convergo_callback is unavailable, write "callback transport failed" and include the exact callback text in your final answer.
 ```
 
-## Heartbeat Prompt Checklist (Codex only)
+Native continuation callback transport block (Codex
+`send_message_to_thread` only):
+
+```text
+Callback destination: your final answer in this same Codex task. Desktop wait_threads delivers it to the orchestrator.
+
+When complete or blocked, make your final answer the exact callback text required below.
+Do not call convergo_callback during this continuation.
+If you create or receive an audit artifact, include this line in the callback:
+Audit artifact: <absolute path>
+```
+
+## Bootstrap Heartbeat Prompt Checklist (Codex only)
 
 Heartbeat prompts should say:
 
 - which specialist thread to check,
-- which attached execution-session id carries `specialist_callback`,
+- which attached execution-session id carries `specialist_callback` and
+  `thread_handoff_ready`,
 - what callback shape to detect,
 - whether the actor completed the role-specific feedback intake,
 - if still active, report one short status and continue waiting,
 - do not busy-wait,
 - delete or update the heartbeat when the phase is complete or stale.
+
+Do not use a heartbeat for Desktop-native continuations; use `wait_threads`.
 
 When updating a heartbeat for a new phase, replace the old instructions. Do not
 wrap or nest previous heartbeat payloads inside the new heartbeat prompt.

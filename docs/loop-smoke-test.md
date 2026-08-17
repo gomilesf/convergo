@@ -66,22 +66,30 @@ The same scenario runs on Codex through the skill-local
 1. Write each specialist prompt under the loop scratch directory.
 2. Launch `start` through `exec_command` with a short yield and capture the
    `threadId` from its `thread_started` JSON event.
-3. Verify the id with `read_thread`; confirm the transport event reports
-   `approvalPolicy: never` and effective `sandbox: dangerFullAccess` (the
-   thread request uses `sandbox: danger-full-access`).
-4. Continue the worker or reviewer with the transport's `resume` operation,
-   using the same thread id and worktree.
-5. Confirm the specialist calls `convergo_callback` and the attached execution
-   session prints one `specialist_callback` event with the exact callback text.
-6. Use heartbeat waiting instead of task notifications; each wake-up reads the
-   execution session and thread at most once.
+3. Confirm the transport event reports `approvalPolicy: never` and effective
+   `sandbox: dangerFullAccess` (the thread request uses
+   `sandbox: danger-full-access`). Confirm the initial specialist calls
+   `convergo_callback` and the execution session prints one
+   `specialist_callback` event.
+4. Wait for `thread_handoff_ready`. It must appear only after
+   `thread/unsubscribe` succeeds and the bootstrap App Server process exits.
+   Then verify the id with `read_thread`.
+5. Continue the worker or reviewer with Desktop `send_message_to_thread`, using
+   the same thread id. The continuation prompt tells the specialist to return
+   the exact callback as its final answer and not to call `convergo_callback`.
+6. Use `wait_threads` with the continuation cursor and confirm the final answer
+   callback. Inspect both turns' persisted permission context: each must retain
+   `approval_policy: never`, `sandbox_policy.type: danger-full-access`, and the
+   disabled Full Access permission profile.
+7. Confirm no command approval was requested, no active-writer conflict was
+   reported, and no standalone `codex app-server --stdio` process remains.
 
-Pass: every start and resume returns the same explicit full-access settings,
-the specialist runs without command approvals, `read_thread` observes the
-real persisted thread, and callback/fresh-review semantics match the Claude
-phases above. A managed-policy rejection or downgraded App Server response
-must fail before `turn/start`; a missing required callback must also fail the
-transport.
+Pass: the bootstrap starts one top-level Full Access task, the native
+continuation reuses that task and its context, and callback/fresh-review
+semantics match the Claude phases above. A managed-policy rejection or
+downgraded App Server response must fail before `turn/start`; a missing required
+bootstrap callback must also fail the transport. Invoking the transport with
+`resume` must fail before any App Server process is launched.
 
 ## Hybrid transport (codex wrapper + orchestrator watcher)
 

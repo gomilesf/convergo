@@ -50,8 +50,8 @@ lines.on("line", (line) => {
     send({ id: message.id, result: { requirements } })
     return
   }
-  if (message.method === "thread/start" || message.method === "thread/resume") {
-    const threadId = message.method === "thread/resume" ? message.params.threadId : "thread-full-access"
+  if (message.method === "thread/start") {
+    const threadId = "thread-full-access"
     const fullAccess = scenario !== "downgraded"
     send({
       id: message.id,
@@ -64,6 +64,13 @@ lines.on("line", (line) => {
         modelProvider: "openai",
         sandbox: { type: fullAccess ? "dangerFullAccess" : "workspaceWrite" },
       },
+    })
+    return
+  }
+  if (message.method === "thread/unsubscribe") {
+    send({
+      id: message.id,
+      result: { status: scenario === "unsubscribe-failure" ? "stillSubscribed" : "unsubscribed" },
     })
     return
   }
