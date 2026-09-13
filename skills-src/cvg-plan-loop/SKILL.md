@@ -44,9 +44,8 @@ record the id returned by the tool. Verify it per Gate 1; if it is not
 verifiable, do not continue.
 
 <!-- codex -->
-(Codex) Include the protocol's `<specialist-thread-id>` identity line in the
-planner prompt. The App Server transport replaces it before turn start. After
-`thread_handoff_ready`, verify with `read_thread` that the ids match.
+(Codex) After verification, send the planner its verified task id before
+creating the heartbeat.
 <!-- /codex -->
 
 Planner prompt must include:
@@ -60,7 +59,7 @@ Planner prompt must include:
 - plan-only boundary,
 - output path rules,
 - task-specific external side-effect boundary,
-- operation-appropriate callback transport block,
+- callback transport block,
 - callback template.
 
 Do not restate the planning skill's process or paste broad repo rules, likely
@@ -91,7 +90,7 @@ Reviewer prompt must include:
 - read-only boundary,
 - blocker-only reporting rule,
 - task-specific external side-effect boundary,
-- operation-appropriate callback transport block,
+- callback transport block,
 - callback template.
 
 Do not paste the full planning prompt or all context documents when the plan
@@ -131,7 +130,7 @@ The feedback prompt must include:
 - current plan path and related contracts,
 - exact reviewer blocker findings appended under a `Plan Review Feedback Input` section,
 - task-specific external side-effect boundary,
-- operation-appropriate callback transport block,
+- callback transport block,
 - callback template.
 
 Do not restate the feedback skill's intake, classification, or revision rules.
@@ -148,7 +147,7 @@ Focused scope:
 - check directly related contradictions introduced by the revision,
 - do not redo broad review unless the plan's core design changed.
 
-The focused re-review prompt must include the operation-appropriate callback
+The focused re-review prompt must include the callback
 transport block and exact callback template.
 
 Complete the waiting handoff per Gate 3 and end the active turn.

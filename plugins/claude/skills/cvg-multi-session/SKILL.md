@@ -23,15 +23,15 @@ Bind the specialist operations to the current platform before applying any other
 
 | Operation | Codex | Claude Code |
 |---|---|---|
-| Spawn specialist | skill-local App Server transport `start` | `Agent` tool with `run_in_background: true` |
-| Continue specialist | Desktop `send_message_to_thread` on the same thread id | `SendMessage` to the agent id |
-| Verify identity | `read_thread` after bootstrap handoff | agent id in the `Agent` tool result |
+| Spawn specialist | `create_thread` | `Agent` tool with `run_in_background: true` |
+| Continue specialist | `send_message_to_thread` on the same thread id | `SendMessage` to the agent id |
+| Verify identity | `read_thread` on the returned thread id | agent id in the `Agent` tool result |
 | Inspect output | `wait_threads` and `read_thread` | `TaskOutput` or the completion notification |
-| Wait | attached bootstrap session, then `wait_threads` | end the turn; the harness re-invokes the orchestrator on `<task-notification>` |
+| Wait | one bounded `wait_threads` call, then heartbeat handoff if still active | end the turn; the harness re-invokes the orchestrator on `<task-notification>` |
 
-The authoritative specialist identity is always the id returned by the
-platform transport — never an id the specialist writes in prose. Do not accept
-placeholder specialist identity in callback templates.
+The authoritative specialist identity is always the id returned by the platform
+tool — never an id the specialist writes in prose. Do not accept placeholder
+specialist identity in callback templates.
 
 On Claude Code, background specialists can spawn their own subagents (auxiliary
 reviewers, researchers), and a completed specialist is resumed from its
@@ -49,7 +49,7 @@ Codex threads or Claude Code background agents.
 
 - Spawn a new specialist with the spawn operation unless the user explicitly named an existing specialist session.
 - Continue an existing specialist with the continue operation.
-- Verify every specialist id before its first continuation with the Gate 0 verify operation.
+- Verify every specialist id immediately after creation or selection with the Gate 0 verify operation.
 - Do not use local shell jobs, detached processes, or inline role-play in the orchestrator turn as substitutes for a real specialist session.
 - Do not treat a process id, shell job id, or model-generated id as a specialist id.
 - If the id returned by the spawn operation cannot be verified, stop the workflow and retry with the platform specialist tools or report a tool-layer blocker.
@@ -210,7 +210,7 @@ Every specialist prompt must include:
 - task-specific external side-effect boundary, especially whether push, deploy,
   remote smoke checks, secrets, or external environment/data changes are allowed,
 - audit artifact callback line when the specialist creates or receives one,
-- the operation-appropriate callback transport block,
+- exact callback transport block,
 - exact callback template.
 
 Do not include:

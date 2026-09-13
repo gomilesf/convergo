@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test"
-import { existsSync, readdirSync, readFileSync } from "node:fs"
+import { readdirSync, readFileSync } from "node:fs"
 import path from "node:path"
 import { PLATFORM_SKILL_ROOTS } from "../src/metadata"
 import { PROTOCOL_CONSUMER_SKILLS, stripPlatform, type Platform } from "../src/platform-content"
@@ -293,8 +293,8 @@ describe("skill conventions", () => {
     for (const relativeRoot of [PLATFORM_SKILL_ROOTS.source, PLATFORM_SKILL_ROOTS.codex]) {
       const skillContent = readFileSync(path.join(ROOT, relativeRoot, "cvg-build-loop", "SKILL.md"), "utf8")
 
-      expect(skillContent, relativeRoot).toContain("The App Server transport replaces it before turn start")
-      expect(skillContent, relativeRoot).toContain("After\n`thread_handoff_ready`, verify with `read_thread` that the ids match")
+      expect(skillContent, relativeRoot).toContain("After verifying the worker task with `read_thread`")
+      expect(skillContent, relativeRoot).toContain("After verifying the reviewer task with `read_thread`")
     }
 
     const claudeContent = readFileSync(path.join(ROOT, PLATFORM_SKILL_ROOTS.claude, "cvg-build-loop", "SKILL.md"), "utf8")
@@ -329,35 +329,6 @@ describe("skill conventions", () => {
     }
   })
 
-  test("Codex loop skills ship the canonical App Server transport", () => {
-    const sourcePath = path.join(
-      ROOT,
-      PLATFORM_SKILL_ROOTS.source,
-      "cvg-multi-session/scripts/codex-app-server-transport.mjs",
-    )
-    const canonical = readFileSync(sourcePath, "utf8")
-
-    for (const skill of ["cvg-multi-session", ...PROTOCOL_CONSUMER_SKILLS]) {
-      const transportPath = path.join(
-        ROOT,
-        PLATFORM_SKILL_ROOTS.codex,
-        skill,
-        "scripts/codex-app-server-transport.mjs",
-      )
-      expect(readFileSync(transportPath, "utf8"), transportPath).toBe(canonical)
-    }
-
-    for (const skill of ["cvg-multi-session", ...PROTOCOL_CONSUMER_SKILLS]) {
-      const transportPath = path.join(
-        ROOT,
-        PLATFORM_SKILL_ROOTS.claude,
-        skill,
-        "scripts/codex-app-server-transport.mjs",
-      )
-      expect(existsSync(transportPath), transportPath).toBe(false)
-    }
-  })
-
   test("platform builds carry no markers or foreign platform sections", () => {
     const markerRe = /^<!-- \/?(codex|claude) -->$/m
 
@@ -381,8 +352,8 @@ describe("skill conventions", () => {
       "utf8",
     )
     expect(codexProtocol).toContain("Heartbeat Prompt Checklist")
-    expect(codexProtocol).toContain("Bootstrap callback transport block (Codex `start` only):")
-    expect(codexProtocol).toContain("Native continuation callback transport block (Codex")
+    expect(codexProtocol).toContain("Callback transport block (Codex):")
+    expect(codexProtocol).toContain("send the exact callback text below to that task with send_message_to_thread")
     expect(codexProtocol).not.toContain("You are a background specialist agent.")
     expect(codexProtocol).not.toContain("persisted transcript")
   })
@@ -416,36 +387,29 @@ describe("skill conventions", () => {
 
     for (const requiredText of [
       "### Gate 0: Transport Binding",
-      "| Spawn specialist | skill-local App Server transport `start` | `Agent` tool with `run_in_background: true` |",
-      "| Continue specialist | Desktop `send_message_to_thread` on the same thread id | `SendMessage` to the agent id |",
-      "scripts/codex-app-server-transport.mjs",
-      "The transport checks managed requirements",
-      "Do not fall back to `create_thread`",
-      "`sandbox=danger-full-access`",
-      "`sandboxPolicy.type=dangerFullAccess`",
-      "--require-callback",
-      "`convergo_callback`",
-      "`specialist_callback`",
-      "`thread_handoff_ready`",
-      "`thread/unsubscribe`",
+      "| Spawn specialist | `create_thread` | `Agent` tool with `run_in_background: true` |",
+      "| Continue specialist | `send_message_to_thread` on the same thread id | `SendMessage` to the agent id |",
+      "Use the native\nDesktop task lifecycle for both creation and continuation",
+      "Use a\nnative project worktree for a git repository",
+      "Never pass a `clientThreadId`\nto thread tools",
+      "stop with a permission blocker",
+      "Do not switch transports or replace\nthe specialist task",
       "`wait_threads`",
-      "Do not create a heartbeat for native continuations",
-      "The `thread_started` transport event contains the",
+      "use one bounded `wait_threads` call",
+      "send a short identity\nnote with `send_message_to_thread`",
       "the harness re-invokes the orchestrator on `<task-notification>`",
       "resumed from its\npersisted transcript when continued with `SendMessage`",
       "do not flatten a specialist's internal delegation into\nthe orchestrator",
       "Spawn a new specialist with the spawn operation unless the user explicitly named an existing specialist session.",
       "Continue an existing specialist with the continue operation.",
-      "Verify every specialist id before its first continuation",
+      "Verify every specialist id immediately after creation or selection",
       "Your verified thread id is <specialist-thread-id>",
       "Do not use local shell jobs, detached processes, or inline role-play in the orchestrator turn as substitutes for a real specialist session.",
       "stop the workflow and retry with the platform specialist tools or report a tool-layer blocker.",
-      "newly spawned specialist calls `convergo_callback` exactly once",
-      "continued specialist returns the exact callback text as its final answer",
-      "It must not call\n  `convergo_callback`",
+      "must send its callback to that task with `send_message_to_thread`",
+      "make the same callback its final answer",
       "If the specialist creates or receives an audit artifact, the callback must include `Audit artifact: <absolute path>`.",
-      "Callback destination: the attached Convergo App Server transport.",
-      "Callback destination: your final answer in this same Codex task.",
+      "Destination orchestrator Codex task id: <orchestrator-thread-id>",
       "Do not emulate waiting with `sleep`, repeated reads, shell loops, timers, or repeated status checks in the same assistant turn — on either platform.",
       "do not replace the missing heartbeat with manual polling.",
       "Same-reviewer pass is never the final exit condition.",

@@ -56,7 +56,7 @@ Worker prompt must include:
 - plan path or implementation goal,
 - implementation notes path only when the plan or repo convention requires one,
 - task-specific external side-effect boundary,
-- operation-appropriate callback transport block,
+- callback transport block,
 - callback templates.
 
 Do not restate `cvg-work` execution rules in the worker prompt. Do not paste
@@ -64,9 +64,8 @@ likely files, broad surface checklists, previous reviewer risk hints, old
 commits, or repo policy summaries unless the user supplied them as task
 authority and they are not linked from the plan.
 
-(Codex) Include the protocol's `<specialist-thread-id>` identity line in the
-worker prompt. The App Server transport replaces it before turn start. After
-`thread_handoff_ready`, verify with `read_thread` that the ids match.
+(Codex) After verifying the worker task with `read_thread`, send the worker its
+verified task id before creating the heartbeat.
 
 Worker completion callback template:
 
@@ -99,7 +98,7 @@ Reviewer prompt must include:
 - read-only boundary,
 - blocker-only reporting rule,
 - task-specific external-side-effect boundary,
-- operation-appropriate callback transport block,
+- callback transport block,
 - callback template.
 
 Do not paste changed files in full when the reviewer can read the worktree.
@@ -116,9 +115,8 @@ Reviewer callback template:
 I am the fresh code reviewer. My specialist id is <reviewer-id>. This first-pass full code review is complete. Verdict: <ready to merge / ready with fixes / not ready>. Findings: <none or numbered blocker list>. Non-blocking P2 notes: <none or brief list>. Please decide the next step.
 ```
 
-(Codex) Include the protocol's `<specialist-thread-id>` identity line in the
-reviewer prompt. The App Server transport replaces it before turn start. After
-`thread_handoff_ready`, verify with `read_thread` that the ids match.
+(Codex) After verifying the reviewer task with `read_thread`, send the reviewer
+its verified task id before creating the heartbeat.
 
 Complete the waiting handoff per Gate 3 and end the active turn while waiting.
 
@@ -149,7 +147,7 @@ Feedback prompt must include:
   and current head,
 - exact reviewer blocker findings appended under a `Code Review Feedback Input` section,
 - task-specific external-side-effect boundary,
-- operation-appropriate callback transport block,
+- callback transport block,
 - callback template.
 
 Do not restate the feedback skill's intake, classification, or repair rules.
@@ -183,7 +181,7 @@ Focused re-review prompt must include:
 
 - `Review mode: focused-re-review`,
 - `Do not consult project memory, prior sessions, rollout summaries, or external history. The repository's own git history (log, blame, commit messages) is repo evidence, not external history.`
-- the operation-appropriate callback transport block and exact callback template.
+- the callback transport block and exact callback template.
 
 Focused re-review does not require auxiliary reviewers. Do not ask the focused
 reviewer to dispatch auxiliary reviewers or synthesize inline auxiliary
@@ -230,7 +228,7 @@ QA worker prompt must include:
 - evidence/report path,
 - stop-and-callback rule for failures,
 - no-secrets rule,
-- operation-appropriate callback transport block,
+- callback transport block,
 - callback template.
 
 Classify QA failures before routing:

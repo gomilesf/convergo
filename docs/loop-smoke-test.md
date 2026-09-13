@@ -60,36 +60,33 @@ result (never from specialist prose). Expected cost: ~5 subagent runs of
 
 ## Codex equivalent
 
-The same scenario runs on Codex through the skill-local
-`scripts/codex-app-server-transport.mjs` client:
+The same scenario runs on Codex through native Desktop task tools:
 
-1. Write each specialist prompt under the loop scratch directory.
-2. Launch `start` through `exec_command` with a short yield and capture the
-   `threadId` from its `thread_started` JSON event.
-3. Confirm the transport event reports `approvalPolicy: never` and effective
-   `sandbox: dangerFullAccess` (the thread request uses
-   `sandbox: danger-full-access`). Confirm the initial specialist calls
-   `convergo_callback` and the execution session prints one
-   `specialist_callback` event.
-4. Wait for `thread_handoff_ready`. It must appear only after
-   `thread/unsubscribe` succeeds and the bootstrap App Server process exits.
-   Then verify the id with `read_thread`.
-5. Continue the worker or reviewer with Desktop `send_message_to_thread`, using
-   the same thread id. The continuation prompt tells the specialist to return
-   the exact callback as its final answer and not to call `convergo_callback`.
-6. Use `wait_threads` with the continuation cursor and confirm the final answer
-   callback. Inspect both turns' persisted permission context: each must retain
-   `approval_policy: never`, `sandbox_policy.type: danger-full-access`, and the
-   disabled Full Access permission profile.
-7. Confirm no command approval was requested, no active-writer conflict was
-   reported, and no standalone `codex app-server --stdio` process remains.
+1. Resolve the repository with `list_projects` and launch the worker with
+   `create_thread` using `target.type=project` and
+   `environment.type=worktree`.
+2. If creation returns `clientThreadId`, do not pass it to thread tools. Resolve
+   the ready task by its unique title with `list_threads`, then capture the
+   returned `threadId`.
+3. Verify the task with `read_thread`, send its verified id with
+   `send_message_to_thread`, and use one bounded `wait_threads` call.
+4. Inspect the first turn's persisted permission context. It must report
+   `approval_policy: never` and `sandbox_policy.type: danger-full-access`.
+5. Continue the same worker with `send_message_to_thread`. Use `wait_threads`
+   and confirm the callback is both sent to the orchestrator and preserved as
+   the worker's final answer.
+6. Inspect the continuation permission context and confirm the same task id,
+   worktree, and Full Access policy were retained.
+7. Continue the same reviewer for the focused re-review, then create a new task
+   for the final fresh review. Confirm targeted context retention and fresh
+   isolation match the Claude phases above.
+8. Confirm no approval prompt, active-writer conflict, standalone
+   `codex app-server --stdio` process, or replacement worker task appeared.
 
-Pass: the bootstrap starts one top-level Full Access task, the native
-continuation reuses that task and its context, and callback/fresh-review
-semantics match the Claude phases above. A managed-policy rejection or
-downgraded App Server response must fail before `turn/start`; a missing required
-bootstrap callback must also fail the transport. Invoking the transport with
-`resume` must fail before any App Server process is launched.
+Pass: one native Full Access task owns each specialist lifecycle, continuations
+reuse the exact worker or reviewer task, and only fresh reviews create new
+tasks. Any unexpected permission downgrade is a blocker; do not switch to a
+second transport or silently replace the specialist.
 
 ## Hybrid transport (codex wrapper + orchestrator watcher)
 
