@@ -46,8 +46,9 @@ Hard constraints:
 
 - **P0** - critical breakage, exploitable vulnerability, data loss or
   corruption. Must fix before merge.
-- **P1** - high-impact defect hit in normal usage, or a plan/contract
-  violation. Should fix before merge.
+- **P1** - high-impact defect, or a gap preventing an agreed outcome or its
+  critical verification. A plan/contract violation is blocking only when the
+  requirement is grounded in user intent or applicable product/safety constraints.
 - **P2** - moderate issue with meaningful downside: narrow edge case, perf
   regression, maintainability trap. Non-blocking.
 - **P3** - low-impact or stylistic. Do not emit; style belongs to tooling.

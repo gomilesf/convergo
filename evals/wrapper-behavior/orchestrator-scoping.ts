@@ -12,7 +12,8 @@
 // Cost: one agent call per scenario.
 
 import { spawnSync } from "node:child_process"
-import { readFileSync } from "node:fs"
+import { readFileSync, mkdtempSync, writeFileSync } from "node:fs"
+import { tmpdir } from "node:os"
 import path from "node:path"
 
 const ROOT = path.resolve(import.meta.dir, "../..")
@@ -41,19 +42,31 @@ Deploy order: backend first (non-breaking), clients after.
 `
 
 const TIMEOUT_MS = 300_000
+const outDir = mkdtempSync(path.join(tmpdir(), "cvg-scoping-"))
 
-function runAgent(prompt: string): string {
-  const r = spawnSync("claude", ["-p", prompt, "--model", "sonnet", "--dangerously-skip-permissions"], {
+function runAgent(name: string, prompt: string): string {
+  const r = spawnSync("claude", ["-p", "--model", "sonnet", "--output-format", "json",
+    "--permission-mode", "dontAsk", "--tools", "", "--strict-mcp-config",
+    "--mcp-config", '{"mcpServers":{}}', "--setting-sources", "", "--no-session-persistence"], {
+    cwd: outDir,
+    input: prompt,
     encoding: "utf8",
     timeout: TIMEOUT_MS,
-    stdio: ["ignore", "pipe", "pipe"],
+    stdio: ["pipe", "pipe", "pipe"],
   })
-  return (r.stdout ?? "").trim()
+  writeFileSync(path.join(outDir, `${name}.prompt.txt`), prompt)
+  writeFileSync(path.join(outDir, `${name}.stdout.json`), r.stdout ?? "")
+  writeFileSync(path.join(outDir, `${name}.stderr.txt`), r.stderr ?? "")
+  if (r.error || r.status !== 0) throw new Error(`CLI failed: ${r.error?.message ?? r.status}`)
+  const envelope = JSON.parse(r.stdout)
+  if (envelope.is_error || envelope.subtype !== "success" || envelope.permission_denials?.length)
+    throw new Error(`CLI did not complete cleanly: ${envelope.subtype}`)
+  return String(envelope.result ?? "").trim()
 }
 
 type Scenario = { name: string; prompt: string; check: (out: string) => string | null }
 
-const preamble = `You are the orchestrator session about to run the following skill. The full skill text is your only authority — follow it exactly.
+const preamble = `You are the orchestrator session about to run the following skill. Follow it within the user's goal and explicit constraints. This fixture asks only for the next message; do not run tools or agents or claim execution.
 
 <skill>
 ${skillText}
@@ -96,8 +109,9 @@ Assume this loop ran only the backend slices (1 and 2) in /work/acme-api and the
 ]
 
 let failures = 0
+console.log(`Results: ${outDir}`)
 for (const s of scenarios) {
-  const out = runAgent(s.prompt)
+  const out = runAgent(s.name, s.prompt)
   const note = out ? s.check(out) : "empty agent output"
   if (note) failures++
   console.log(`${note ? "✘" : "✔"} ${s.name}${note ? ` — ${note}` : ""}`)

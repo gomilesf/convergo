@@ -1,7 +1,7 @@
 {
   "name": "convergo",
   "version": "0.5.2",
-  "description": "Disciplined software engineering for coding agents: plan, build, and review in bounded loops until an independent fresh reviewer signs off",
+  "description": "Intent-driven planning, implementation and independent review with bounded repairs",
   "type": "module",
   "private": true,
   "main": ".opencode/plugins/convergo.js",
@@ -33,7 +33,8 @@
     "test": "bun test",
     "eval:wrapper": "bun run evals/wrapper-behavior/wrapper-compliance.ts",
     "eval:repin": "bun run evals/wrapper-behavior/resume-repin.ts",
-    "eval:scoping": "bun run evals/wrapper-behavior/orchestrator-scoping.ts"
+    "eval:scoping": "bun run evals/wrapper-behavior/orchestrator-scoping.ts",
+    "eval:convergence": "bun run evals/convergence/run.ts"
   },
   "devDependencies": {
     "bun-types": "^1.0.0"

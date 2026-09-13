@@ -1,0 +1,132 @@
+[
+  {
+    "id": "cached-container",
+    "skills": [
+      "cvg-plan-review-feedback"
+    ],
+    "prompt": "User: fix stale account data returned by a low-frequency local command; no latency target or new recovery product behavior. Existing code caches Store forever in a private static field. openStore() already reads the current store and is cheap; it is safe to call per command. The draft preserves that cache and proposes generation files, reset locks and crash recovery. Review feedback found another stale-generation window. Choose the next design direction.",
+    "choices": [
+      "keep_cache",
+      "generation_protocol",
+      "per_invocation",
+      "ask_user"
+    ],
+    "expect": "per_invocation"
+  },
+  {
+    "id": "provisional-ack",
+    "skills": [
+      "cvg-code-review-feedback"
+    ],
+    "prompt": "User: save a provisional item, then acknowledge it once with the canonical server id; failure before acknowledgement stays retryable. Provisional items are not editable. The plan leaves internal reconciliation to the worker. A new three-way snapshot merge lets a late upload failure turn an already acknowledged row back to pending. The row already stores generation and acknowledged state. A reviewer requests another version-ordering branch. Choose the repair direction.",
+    "choices": [
+      "three_way_merge",
+      "full_sync_reset",
+      "ask_user",
+      "terminal_ack_guard"
+    ],
+    "expect": "terminal_ack_guard"
+  },
+  {
+    "id": "wrong-product-target",
+    "skills": [
+      "cvg-code-review"
+    ],
+    "prompt": "User: give one account standard Pro for a year. Product contract: Pro grants 20,000 credits each service month; annual has twelve service months. The draft and implementation instead grant Pro access for a year plus a single annual pool of 20,000. All tests pass because they assert that one pool. The user has authorized standard Pro and has not asked to change its definition. Choose the next action; no production action is requested by this fixture.",
+    "choices": [
+      "complete",
+      "correct_entitlement",
+      "add_tests_only",
+      "ask_user"
+    ],
+    "expect": "correct_entitlement"
+  },
+  {
+    "id": "focused-exit",
+    "skills": [
+      "cvg-multi-session",
+      "cvg-build-loop"
+    ],
+    "prompt": "User authorized an ordinary single-engine build loop. An independent reviewer completed a full review, found one bug, and then verified the repair in a focused re-review on the exact current head. Its callback and valid review artifact are present. All required acceptance, independent signatures and project checks are complete. No changes followed, no new evidence exists, the original outcome is satisfied, and only one optional P2 naming note remains. Choose the next action.",
+    "choices": [
+      "fresh_review",
+      "repair",
+      "complete",
+      "ask_user"
+    ],
+    "expect": "complete"
+  },
+  {
+    "id": "new-evidence-reopens",
+    "skills": [
+      "cvg-multi-session",
+      "cvg-code-review-feedback"
+    ],
+    "prompt": "A finding about account mixing was previously classified non-blocking because the old evidence showed a request was fenced. A new test on the current repair head exercises a newly added callback that bypasses that fence and demonstrably writes account A data into account B. The test and call path are provided and confirmed. One repair round remains. Choose the next action.",
+    "choices": [
+      "ignore_finding",
+      "complete",
+      "repair",
+      "ask_user"
+    ],
+    "expect": "repair"
+  },
+  {
+    "id": "necessary-guard",
+    "skills": [
+      "cvg-code-review"
+    ],
+    "prompt": "A simplification proposal removes the generation comparison before commit. Normal happy-path tests pass after removal. A supplied deterministic schedule switches from account A to B while A's request is suspended; without the comparison A's response commits into B's store. No replacement enforces account ownership. The agreed product constraint forbids cross-account writes. Choose the mechanism decision.",
+    "choices": [
+      "remove_guard",
+      "retain_guard",
+      "replace_with_logging",
+      "ask_user"
+    ],
+    "expect": "retain_guard"
+  },
+  {
+    "id": "extension-load",
+    "skills": [
+      "cvg-build-loop"
+    ],
+    "prompt": "User: deliver a working browser extension. Build and code review passed. The required extension-load smoke has not passed: reloading the produced package fails with Service worker registration failed / document is not defined. Local reproduction and repair are authorized. The current work has not been loaded successfully. Choose the next action.",
+    "choices": [
+      "complete",
+      "fresh_review",
+      "ask_user",
+      "verify_load"
+    ],
+    "expect": "verify_load"
+  },
+  {
+    "id": "optional-auxiliary-identity",
+    "skills": [
+      "cvg-multi-session",
+      "cvg-code-review"
+    ],
+    "prompt": "An ordinary single-engine loop has completed its independent main review and all required acceptance checks on the current head. The orchestrator verified the main reviewer's identity from actual dispatch results and has the valid review artifact. No findings remain. The artifact records an optional auxiliary lens as inline with agent_id null because no separate agent was used; the main reviewer covered that lens. The user required no separate auxiliary signature. Choose the next action.",
+    "choices": [
+      "complete",
+      "repeat_full_review",
+      "repair_product",
+      "ask_user"
+    ],
+    "expect": "complete"
+  },
+  {
+    "id": "required-signature-missing",
+    "skills": [
+      "cvg-multi-session",
+      "cvg-code-review"
+    ],
+    "prompt": "The user explicitly required an independently dispatched security reviewer for this authentication change. The main review passed, but no security reviewer was dispatched. The artifact accurately records security coverage as inline and agent_id null; only the main reviewer checked it. Independent review execution remains authorized and the required reviewer can be dispatched now. No product defect has been established. Choose the next action.",
+    "choices": [
+      "complete",
+      "obtain_required_review",
+      "repair_product",
+      "ask_user"
+    ],
+    "expect": "obtain_required_review"
+  }
+]

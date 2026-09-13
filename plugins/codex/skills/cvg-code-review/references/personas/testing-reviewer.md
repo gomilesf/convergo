@@ -41,3 +41,10 @@ Use only the prompt, plan, diff, and repository files you read for this review; 
   "testing_gaps": []
 }
 ```
+
+Assess whether evidence establishes the original user outcome, not merely the
+chosen implementation. Shared parameterized tests may cover multiple surfaces;
+retain independent defect classes and necessary real-use validation. Do not
+demand one test per matrix cell or new test-only architecture. A green suite
+can validate the wrong target; an untested critical protection is not safe to
+remove merely because an ablated implementation also passes that suite.

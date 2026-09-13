@@ -34,7 +34,7 @@ Defaults; the user's invocation may override either tier.
 | Tier | Default | Runs |
 | --- | --- | --- |
 | Execution tier | `codex exec -m gpt-5.6-sol` at `model_reasoning_effort=high` — the current frontier codex pin, updated with plugin releases | worker, first-pass fresh reviews, QA workers |
-| Design tier | Claude `fable` via the `Agent` tool `model` parameter | final-fresh-exit reviews |
+| Design tier | Claude `fable` via the `Agent` tool `model` parameter | final independent review and focused rechecks |
 
 Focused re-reviews always return to the reviewer session that raised the
 findings, on whichever tier that session lives — unchanged protocol.
@@ -57,34 +57,23 @@ callback templates, and round cap — with these routing overrides:
 
 1. **Worker (Phase 1):** codex-backed specialist (pattern below), role
    skill `cvg-work`.
-2. **Fresh code review (Phase 2):** codex-backed specialist (pattern
-   below), role skill `cvg-code-review`. `codex exec` sessions expose a
-   subagent primitive (`collaboration.spawn_agent` — verified live):
-   instruct codex reviewers to dispatch their auxiliary personas through
-   it and record the returned child ids in the coverage object. Inline
-   coverage remains the role skill's documented fallback when a spawn
-   fails. Either way, codex-side child ids reach the orchestrator only
-   through the relay — self-reported — so execution-tier coverage still
-   never satisfies the final-fresh-exit condition, which is one more
-   reason the final gate below is a native design-tier specialist whose
-   dispatches the orchestrator verifies from its own tool results.
+2. **Independent code review (Phase 2):** codex-backed specialist, role
+   skill `cvg-code-review`. The reviewer selects auxiliary checks by actual risk
+   and authorized tool availability, retaining real child ids when dispatched.
+   Do not infer independent dispatch from a prose claim or artifact alone.
 3. **Feedback (Phase 3):** unchanged — blockers return to the codex-backed
    worker with `cvg-code-review-feedback`.
-4. **Tiered exit (Phase 5 override):** a clean execution-tier fresh review
-   never exits the loop; it is a promotion. Spawn the
-   `Review mode: final-fresh-exit` reviewer as a native design-tier
-   specialist (`model: "fable"`, role skill `cvg-code-review`).
-   - Design-tier review clean: the loop exits.
-   - Design-tier blockers: normal Phase 3 feedback to the worker, focused
-     re-review by the same design-tier session, and on pass the next fresh
-     first review starts again at the execution tier before the next
-     promotion.
-   - Every feedback-repair-re-review-fresh-review cycle counts as one round
-     against the cap, regardless of which tier raised the blockers.
-5. **Design-tier cost control:** in the design-tier reviewer prompt, instruct
-   that auxiliary persona subagents be spawned on a cheaper Claude model (for
-   example `model: "opus"`); synthesis and the verdict stay on the design
-   tier.
+4. **Tiered exit (Phase 5 override):** after the execution review is clean,
+   a native design-tier specialist performs the user-selected final independent
+   review with `cvg-code-review`.
+   - A clean design-tier review exits when required acceptance is complete.
+   - Design-tier blockers return to the worker through feedback, followed by
+     focused re-review in the same design-tier session. Its pass may exit;
+     do not restart execution-tier review merely to obtain another promotion.
+   - A material design change, expanded risk or new evidence can require an
+     additional independent pass. Every repair/recheck uses the original cap.
+5. **Design-tier auxiliaries:** select only when the review needs their risk
+   perspective; honor user-selected models and independent-signature requirements.
 6. **QA (Phase 6):** execution tier.
 
 ## Cross-Repo Plans
@@ -196,9 +185,7 @@ immediately instead of ARMED. A relay-shaped first callback — payload plus
 
 ## Why the Exit Is Tiered
 
-No one can know in advance which fresh review will be the last one, so the
-scarce design model cannot simply "take the final round". Instead the exit
-condition itself is two-level: an execution-tier clean review is necessary
-but never sufficient, and only a clean design-tier `final-fresh-exit` review
-ends the loop. The design model therefore runs exactly when the cheap engine
-believes the work is done — typically once or twice per loop.
+The user-selected split preserves an execution review and an independent
+design-tier signature. After design-tier repairs, that same reviewer's focused
+pass can close the loop. Repeating both tiers requires a material change, new
+evidence or an explicit user requirement; it is not a consequence of passing.

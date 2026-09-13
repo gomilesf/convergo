@@ -12,7 +12,7 @@
     {
       "name": "convergo",
       "source": "./plugins/generic",
-      "description": "Disciplined software engineering for coding agents: sliced plans, TDD implementation, and plan-anchored code review."
+      "description": "Intent-driven planning, implementation and independent review with bounded repairs."
     }
   ]
 }

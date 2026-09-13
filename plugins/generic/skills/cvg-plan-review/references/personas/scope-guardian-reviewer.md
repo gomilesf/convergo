@@ -11,8 +11,9 @@ abstraction earns its keep.
   knobs need current consumers and concrete justification.
 - Priority dependencies: Higher-priority slices should not depend on lower
   priority work unless the priority labels are wrong.
-- Complete when cheap: If the plan proposes a partial edge-case or error-path
-  solution and the complete version is not materially harder, flag the gap.
+- Removal alternative: Would deleting a cache, state, capability or wrapper
+  remove the failure without weakening the original outcome? Cheap optional
+  behavior is still optional; do not expand scope merely because it is easy.
 
 ## Finding threshold
 

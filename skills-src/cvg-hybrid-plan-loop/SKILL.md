@@ -59,8 +59,9 @@ callback templates, and exit condition — with these routing overrides:
    `cvg-plan-review`.
 3. **Plan review feedback:** unchanged — blockers return to the same
    design-tier planner session with `cvg-plan-review-feedback`.
-4. **Exit:** unchanged — a fresh execution-tier reviewer reporting no
-   blocking findings.
+4. **Exit:** an independent execution-tier review followed, if needed, by
+   focused rechecks in that same session can exit under Gate 5. Do not restart
+   a full review without material change, new evidence or an explicit requirement.
 
 `codex exec` sessions expose a subagent primitive
 (`collaboration.spawn_agent` — verified live): instruct codex plan

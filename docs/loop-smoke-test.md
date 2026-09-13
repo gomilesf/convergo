@@ -2,7 +2,7 @@
 
 Manual end-to-end check that the `cvg-multi-session` Gate 0 transport binding
 works on Claude Code: spawn, continue (resume from transcript), completion
-notification, fresh-vs-same reviewer semantics. Run it before releases that
+notification, independent review and focused-exit semantics. Run it before releases that
 touch the loop skills. It consumes real agent tokens, so it is a manual gate,
 not part of `bun test`.
 
@@ -29,7 +29,7 @@ wrong* body (`return a - b`) and to end with the worker callback template.
 the fresh-review boundary line, pointing at `add.py` and `SPEC.txt`,
 blocker-only reporting, read-only, reviewer callback template.
 
-- Pass: verdict `not ready` with one P0 finding naming the `a - b` bug.
+- Pass: verdict `not ready` with one blocking finding naming the `a - b` bug.
 
 **Phase 3 — feedback to same worker (continue operation).** `SendMessage` to
 the *Phase 1 agent id* with the exact reviewer findings under
@@ -43,24 +43,24 @@ the *Phase 1 agent id* with the exact reviewer findings under
 `SendMessage` to the *Phase 2 agent id* with `Review mode: focused-re-review`,
 asking it to verify *its own* first-pass findings without restating them.
 
-- Pass: the reviewer correctly recalls its own P0 finding from first-pass
+- Pass: the reviewer correctly recalls its own blocking finding from first-pass
   context (proof of transcript-based context retention) and confirms the fix
   with no new blockers.
 
-**Phase 5 — final fresh exit (spawn, no history).** Spawn another *new*
-reviewer subagent with the same Phase 2 prompt shape.
-
-- Pass: verdict `ready to merge`, findings none.
+**Phase 5 — exit decision.** Give the orchestrator the verified focused pass,
+current head and completed acceptance evidence. It should finish without another
+full review. Then present a separate variant with a confirmed new failing test;
+it must reopen the relevant repair within the original round cap.
 
 ## Overall pass
 
-All five phase criteria met, and every specialist id used came from a tool
-result (never from specialist prose). Expected cost: ~5 subagent runs of
-~25k tokens each.
+All phase criteria met; ids came from tool results. This is a small fixture:
+record actual run counts and cost rather than assuming fixed token consumption.
 
 ## Codex equivalent
 
-The same scenario runs on Codex through native Desktop task tools:
+The same scenario runs on Codex through native Desktop task tools when the
+user has explicitly authorized creating those tasks and the runtime permits it:
 
 1. Resolve the repository with `list_projects` and launch the worker with
    `create_thread` using `target.type=project` and
@@ -77,9 +77,9 @@ The same scenario runs on Codex through native Desktop task tools:
    the worker's final answer.
 6. Inspect the continuation permission context and confirm the same task id,
    worktree, and Full Access policy were retained.
-7. Continue the same reviewer for the focused re-review, then create a new task
-   for the final fresh review. Confirm targeted context retention and fresh
-   isolation match the Claude phases above.
+7. Continue the same reviewer for focused re-review. Confirm a clean pass plus
+   completed acceptance can exit; a new full review needs material change, new
+   evidence or an explicit requirement.
 8. Confirm no approval prompt, active-writer conflict, standalone
    `codex app-server --stdio` process, or replacement worker task appeared.
 

@@ -15,6 +15,9 @@ Apply these gates before any planner, worker, reviewer, QA runner, or quality re
 
 ### Gate 0: Transport Binding
 
+Tool contracts and existing user authorization govern task creation, delegation
+and external actions; a skill invocation does not grant additional permissions.
+
 Bind the specialist operations to the current platform before applying any other gate:
 
 | Operation | Codex | Claude Code |
@@ -136,47 +139,57 @@ Continue immediately only when an explicit callback is already present or the sp
 
 Reviewer feedback returns to the same planner or worker session that produced the reviewed artifact, via the continue operation.
 
-The orchestrator must not classify findings, choose the repair route, filter reviewer output, or turn the review into a patch list.
+The orchestrator adjudicates scope and severity against the original user
+outcome, authorized changes and concrete evidence before routing repairs.
+Preserve each original finding and the reason for accepting, rejecting or
+reclassifying it in the existing loop ledger. Prefer removing a failure's cause
+when that preserves required behavior; do not turn suggestions into new scope.
+The worker/planner chooses the implementation within its role. Never report the
+orchestrator's judgment as an independent reviewer's signature.
 
 Plan-review blockers return to the planner with the `cvg-plan-review-feedback` skill. The prompt must contain the exact reviewer blocker findings under a `Plan Review Feedback Input` section.
 
 Code-review blockers return to the worker with the `cvg-code-review-feedback` skill. The prompt must contain the exact reviewer blocker findings under a `Code Review Feedback Input` section.
 
-Role boundaries still apply: workers may repair implementation-owned findings only. Workers must stop and callback for plan gaps, contract gaps, systemic design gaps, reviewer clarification, or escalation. Only planners may produce plan or contract revisions.
+Role boundaries still apply: workers repair implementation-owned findings;
+planners revise plans/contracts. Pause dependent work for material unresolved
+behavior decisions, while independent authorized work continues. Source-backed
+technical omissions can be resolved by the planner/orchestrator. Ask the user
+only for a missing product choice, expanded scope/authorization or new risk
+acceptance; reuse existing authorization for the same target and operation.
 
 The orchestrator continues only after the actor callback reports a role-valid result: implementation repair from a worker, plan or contract revision from a planner, or a blocker that needs planner, reviewer, user, or escalation handling.
 
-### Gate 5: Fresh Reviewer Exit
+### Gate 5: Independent Review and Bounded Exit
 
-Same-reviewer pass is never the final exit condition.
+Start with one independent complete review. If it passes, proceed to required
+acceptance checks. If blockers remain, adjudicate them, route a repair batch to
+the same actor, and have the same reviewer verify the findings, repair diff and
+newly affected risks. A focused pass can satisfy the review exit condition.
 
-The exit sequence is:
+Start another full independent review only for a material design/contract change,
+a substantially expanded risk surface, new evidence, or an explicit user
+requirement. A mechanical plan correction does not restart full review. Honor
+user-selected hybrid/dual signatures; inline checks cannot impersonate them.
 
-1. Fresh reviewer performs a complete first review.
-2. If blockers exist, return feedback to the same planner or worker and require the role-specific feedback skill.
-3. Same reviewer performs a focused re-review after the actor produces a reviewable update.
-4. If same reviewer passes, start a new fresh reviewer for another complete first review.
-5. Exit only when the new fresh reviewer reports no blocking findings.
+A fresh reviewer is a newly spawned specialist without prior review context.
+Focused re-review continues the original reviewer. Optional auxiliary checks are
+risk-selected by the role skill; missing required independent coverage must be
+reported as an incomplete review, not repaired with new product code.
 
-A fresh reviewer is a newly spawned specialist with no prior review context.
-Same-reviewer re-review continues the original reviewer session so it retains
-its first-pass context.
+Exit when the original outcome and applicable constraints are met, required
+review and acceptance evidence are complete, and no blocking findings remain.
+A "ready with fixes" verdict carries non-blocking P2 notes to the completion
+summary; it does not require another round or permission to end the loop.
 
-For code-review final exits, the final fresh reviewer prompt must include
-`Review mode: final-fresh-exit`. Its audit artifact must show every selected
-auxiliary reviewer dispatched with a non-null `agent_id`;
-inline auxiliary coverage cannot satisfy the final fresh-reviewer exit condition.
-
-A "ready with fixes" verdict (plan criteria met, only non-blocking P2 findings
-remain) satisfies the exit condition; carry the remaining P2 list into the
-completion summary instead of looping on it.
-
-**Round cap.** One round is one full cycle of steps 1-4. The cap is 3 rounds
-unless the user set a different cap in the invocation. When the cap is reached
-without a clean fresh review, stop the loop and escalate to the user with all
-open findings, their adjudications, and the one-line instruction to authorize
-more rounds; an authorization raises the cap explicitly and is recorded in the
-ledger. Do not keep looping past the cap.
+**Round cap.** One round is one substantive repair batch plus its re-review,
+including repeated repairs by the same reviewer. The default cap is 3 unless
+the user set another limit. The initial review and status checks are not repair
+rounds. Log each round before dispatching its repair; changing reviewer, model,
+role or plan artifact does not reset the count. At the cap, complete the pending
+re-review, then exit if clean or report unfinished work with the exact remaining
+blockers, evidence and smallest next step. Further repair rounds require an
+explicit cap increase recorded in the ledger; reaching the cap is not success.
 
 **Loop ledger.** In-context round counting drifts over long loops, so the cap
 and the ratchet are enforced from a file, not from memory. When the loop
@@ -192,41 +205,29 @@ sent, `round <N> closed | <verdict>` when the focused re-review returns,
 severity adjudication. The cap check and the adjudication ratchet read the
 ledger; the completion summary quotes it.
 
-**Adjudication ratchet.** A finding adjudicated invalid or out of scope by the
-role-specific feedback skill in an earlier round (same file, line, and issue)
-cannot re-block a later round unless new evidence appears. The orchestrator
-relays the prior adjudication back to the reviewer; the reviewer decides
-whether new evidence overrides it.
-
-The ratchet also covers reviewer classifications: a finding an earlier review
-classified as non-blocking in a verdict that passed cannot be re-raised as
-blocking by a later reviewer without new evidence. The orchestrator relays the
-prior classification from the ledger alongside the new finding — a ledger
-lookup, not orchestrator classification.
-
-A reviewer whose task carries `Review mode: final-fresh-exit` is exempt from
-this classification arm: an exit gate blocks on its own judgment. When it
-re-raises a finding a prior review classified non-blocking, it must cite the
-prior classification from the ledger in its verdict, and the orchestrator
-surfaces the unresolved conflict to the user at loop end or escalation. In
-single-engine loops every Phase 5 fresh reviewer carries final-fresh-exit, so
-there the classification arm binds only first reviews and focused re-reviews.
-That narrowing is intended, not an oversight: thrash protection belongs to
-the early rounds, exit gates keep full judgment, and the round cap bounds the
-cost of a re-raise. The adjudication arm above is never exempted: overturning
-an evidence-based adjudication requires new evidence — and showing the
-original evidence wrong is itself new evidence.
+**Adjudication ratchet.** A finding already adjudicated invalid, out of scope
+or non-blocking cannot re-block without new evidence. Match the underlying
+failure and requirement, not merely a line number or reworded title. This applies
+to all reviewers, including `Review mode: final-fresh-exit`; a new reviewer alone
+is not new evidence. The orchestrator supplies the relevant prior adjudication
+when a duplicate arises. A changed call path, failing test or proof that the old
+evidence was wrong can reopen it. Record the evidence and decision; never
+suppress a real defect merely to satisfy the cap.
 
 Audit artifact identity fields are self-reported by the reviewer. Treat them as
-an audit trail, not proof of dispatch. If the artifact is missing, identity
-fields are null, or the callback contradicts the artifact, treat the exit gate
-as unmet.
+an audit trail, not proof of dispatch. A missing required artifact, a callback
+that contradicts it, or missing verified identity for a reviewer required to
+sign independently leaves the exit gate unmet. An optional auxiliary recorded
+as inline or skipped may have a null identity; that record does not substitute
+for a required independent signature and does not itself block exit.
 
 ## Specialist Prompt Checklist
 
 Every specialist prompt must include:
 
 - role and scope,
+- original user outcome, explicit non-goals, authorized changes and applicable
+  product/safety constraints, stated briefly or linked from the source artifact,
 - callback destination per Gate 2,
 - worktree or repo path,
 - base/head refs when relevant,
@@ -286,4 +287,4 @@ When the workflow completes, summarize:
 - verification gates,
 - remaining known gaps,
 - heartbeat cleanup (Codex),
-- whether the fresh-reviewer exit condition was met.
+- whether independent review and required acceptance were completed.

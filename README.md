@@ -20,11 +20,11 @@ Agent-written code needs review, and agent review needs a loop: find issues,
 fix them, review again. The dirty secret is that this loop often **doesn't
 converge** — each round adds patches, prose, and pseudo-code instead of
 closing in on done. Convergo is a plugin that bounds that loop by
-construction. **It exits only when a fresh reviewer — a newly spawned session
-that reads the diff cold, with no memory of earlier rounds — completes a full
-pass and reports no blockers.
-After three rounds without one, it stops and escalates to you instead of
-churning.**
+construction. **The original user outcome anchors scope. One independent full
+review is followed by focused repair checks; a clean recheck can finish the
+review. Further full reviews need material change, new evidence or an explicit
+requirement. Three repair rounds without resolving real blockers stop with an
+honest unfinished result.**
 
 It is a convergence-focused fork of
 [Compound Engineering](https://github.com/EveryInc/compound-engineering-plugin):
@@ -83,57 +83,62 @@ that.
 orchestrator  records base commit and worktree state,
               spawns a WORKER session with the plan, ends its turn (no polling)
 
-worker        implements slice by slice with TDD, one commit per slice,
+worker        implements behavior slices with regression evidence,
               keeps impl notes for the reviewer
               -> "Implementation round complete. Base a1b2c3, head d4e5f6.
                   Verification: 41 tests pass. Known gaps: none."
 
 orchestrator  spawns a FRESH REVIEWER session
 
-reviewer      reads plan + diff, dispatches correctness/testing sub-reviewers,
-              merges their JSON findings
+reviewer      checks original intent + plan + diff, selecting auxiliaries
+              only for relevant risk or required independent coverage
               -> "Not ready. F1 (P1): retry path drops the rate-limit header.
                   F2: plan never decided burst behavior — contract gap."
 
-orchestrator  returns the findings verbatim to the SAME worker session
+orchestrator  adjudicates scope/severity against the goal and evidence,
+              returns original findings + reasons to the SAME worker
 
 worker        intake first, then repair: F1 is implementation-owned -> fixes it
-              F2 is a contract gap -> STOPS and reports instead of patching
-              around the missing decision
+              F2 needs a product decision -> pauses dependent work and reports
+              while independent authorized work continues
 
-you           decide burst behavior (or send it back through the planner)
+planner       resolves source-backed omissions; asks you only if a real
+              product or risk decision is missing
 
 worker        finishes the repair -> new head commit
 
 reviewer      (same session) focused re-review of the fixes -> pass
 
-orchestrator  spawns a NEW FRESH REVIEWER session
-
-reviewer      (new session) full first pass
-              -> "Ready with fixes. No blockers. Two P2 notes."
-
-orchestrator  exits the loop: base -> head, findings history, P2 list for you
+orchestrator  confirms required acceptance and original intent are satisfied,
+              exits with the review result and any non-blocking P2 notes
 ```
 
-Three properties make this a loop and not a spiral: the worker never patches
-around a missing decision, review feedback goes back to the session that has
-the context, and the exit judgment always comes from a reviewer who has never
-seen the code before.
+Feedback preserves the original goal, the actor considers removing unnecessary
+mechanisms before adding patches, and focused verification can close the loop.
 
 ## The Rules That Make It Converge
-
-![The fresh-reviewer exit gate](docs/assets/gate.webp)
 
 Every rule below is written into the skills, not just described here. What
 can be machine-checked is — the findings schema is validated per finding,
 and the generated platform builds are byte-checked by tests; the behavioral
 rules are prompt contracts, exercised end-to-end by the release smoke test.
 
-**Feedback goes through intake, not straight to edits.** The planner or
-worker that produced the artifact classifies each finding first — code bug,
-plan gap, contract gap, systemic design gap, stale, or blocked on a missing
-decision — and repairs only what its role owns. Workers stop and call back on
-plan, contract, and systemic gaps instead of patching forward.
+**Original intent governs the plan.** The user outcome, explicit non-goals,
+authorized changes and current product/safety constraints govern scope. Candidate
+surfaces are investigated before becoming requirements. Completion checks for
+omissions, unnecessary additions and changed semantics.
+
+**Consider removal before adding machinery.** Before a materially new mechanism
+or a repair, identify what required behavior fails without it. Removing a cache,
+state or accidental capability may eliminate an entire failure class. Use an
+isolated ablation experiment only when uncertainty warrants it; keep necessary
+protections. This adds no mandatory artifact or review round.
+
+**Feedback goes through evidence-based intake.** The orchestrator can adjudicate
+scope and severity, preserving original findings and reasons. Workers repair
+implementation; planners revise plans. Only dependent work pauses for a material
+unresolved decision. Ordinary technical omissions do not automatically require
+another user approval.
 
 **Findings carry evidence, not vibes.** Sub-reviewers return findings against
 a shared schema: `P0`–`P3` severity, discrete confidence anchors, a
@@ -149,16 +154,16 @@ review provenance — no round numbers, finding IDs, or fix-status claims — so
 a fresh reviewer inherits the decision record, not the previous reviewer's
 search map.
 
-**Exit requires a fresh reviewer.** A same-reviewer pass is never the exit
-condition. After repairs, the original reviewer re-reviews the fixes; the
-loop exits only when a newly spawned reviewer completes a full first pass
-with no blockers. "Ready with fixes" (only non-blocking P2 notes remain)
-counts as passing — the loop does not churn on nitpicks.
+**Independent review has a stable exit.** A complete independent review and any
+needed focused rechecks can satisfy the gate. A new full pass needs material
+change, new evidence or an explicit requirement. Required signatures and actual
+acceptance cannot be replaced by inline checks or a green build.
 
-**The loop is capped.** Three rounds without a clean fresh pass stops the
-loop and escalates to you with all open findings. Findings already
-adjudicated invalid cannot re-block a later round without new evidence (the
-adjudication ratchet). Bounded convergence is a rule, not a hope.
+**The loop is capped.** Each substantive repair plus recheck counts, including
+repeated fixes by the same reviewer. The default is three; changing roles or
+models does not reset it. Settled findings cannot re-block without new evidence,
+including at a final gate. Remaining P2 notes do not cause another loop; real
+unresolved blockers mean unfinished work, not success at the cap.
 
 **One loop covers one repo.** The loop's base/head and diff bookkeeping
 spans a single repo, so changes outside it would escape review. When a
@@ -173,14 +178,14 @@ full surfaces + invariant-matrix treatment. Plans never contain code. Open
 behavior decisions that bind multiple slices go into a behavior contract
 rather than being invented downstream.
 
-**The loop runs unattended but finds you at three defined points.** The
+**The loop asks for material decisions.** The
 build loop starts only when you explicitly trigger it on a reviewed plan —
 this gate is where your judgment counts most: check that the behavior
 contract records decisions you actually want, that each slice's "done when"
 is verifiable, and that the invariant matrix covers every surface you know
-about. Mid-loop, a worker blocked on a missing behavior decision stops and
-routes the question to you instead of inventing an answer. And when the
-round cap trips, the escalation lands with you.
+about. Mid-loop, source-backed omissions return to the planner; only a missing product
+choice, new risk or broader authorization needs you. If the cap is reached with
+real blockers, the report names what remains and the smallest next step.
 
 ## Two Ways to Use It
 
@@ -197,10 +202,9 @@ orchestrator that spawns and supervises real specialist sessions.
 
 ```text
 discuss goal
--> /cvg-plan-loop        planner <-> fresh plan reviewers, until clean
+-> /cvg-plan-loop        planner <-> independent review and focused rechecks
 -> human reviews and questions the plan
--> /cvg-build-loop       worker <-> fresh code reviewers, until clean
--> final fresh code review
+-> /cvg-build-loop       worker <-> independent review and focused rechecks
 -> required QA gates, if any
 -> done
 ```
@@ -246,19 +250,15 @@ override either engine.
 | Planner, plan revisions | Fable | direction-setting is where taste pays most |
 | Plan reviewers | Codex (gpt-5.6-sol high) | completeness-vs-codebase checking is execution work — and cross-model review exposes blind spots same-model self-review shares |
 | Worker, first-pass code reviews, QA | Codex (gpt-5.6-sol high) | all the iteration burn lands here |
-| Final `final-fresh-exit` reviewer | Fable | the one gate that decides shipping |
+| Final independent reviewer | Fable | required signature, including focused rechecks |
 
-**The exit is tiered because no one knows which review is the last.** In the
-hybrid build loop a clean Codex fresh review never exits — it *promotes*: it
-triggers a Fable fresh review, and only a clean Fable pass ends the loop.
-Fable blockers re-enter the normal feedback cycle (worker fixes, the same
-Fable session re-reviews, the next round starts back at the Codex tier). In
-practice Fable runs once or twice per loop — exactly when the cheap engine
-believes the work is done. This split also keeps the protocol honest: the
-final exit requires sub-reviewer dispatches the orchestrator can verify
-from its own tool results — codex-side spawns (real since codex shipped
-collaboration subagents) reach the orchestrator only as self-reported
-relay text, so they promote but never exit.
+**The hybrid split includes a final Fable signature.** A clean Codex review
+promotes to an independent Fable review. If Fable finds blockers, the worker
+repairs them and the same Fable reviewer performs a focused recheck; a clean
+result can satisfy that signature without returning to the Codex tier. A new
+full review needs material design or risk changes, new evidence, or an explicit
+requirement. Required independent identities must be verified from dispatch
+results; optional auxiliary reviews do not become extra exit gates.
 
 **Hybrid Codex CLI specialists use the user's own permissions.** Unlike the
 native Codex loop transport above, the Claude-only hybrid wrapper passes no
@@ -288,11 +288,11 @@ with a blocker instead of silently degrading to one engine.
 | `/cvg-plan` | Read an issue and codebase, then write a sliced plan with an invariant matrix when needed | Claude Code, Codex, generic |
 | `/cvg-plan-review` | Review a plan against the actual codebase for missing surfaces, incomplete slices, and wrong invariants | Claude Code, Codex, generic |
 | `/cvg-plan-review-feedback` | Classify and handle plan-review blockers inside the planner session | Claude Code, Codex, generic |
-| `/cvg-work` | Execute a plan slice by slice with TDD and implementation notes | Claude Code, Codex, generic |
+| `/cvg-work` | Implement behavior slices with appropriate verification and scope checks | Claude Code, Codex, generic |
 | `/cvg-code-review` | Review implementation against the plan and contract, separating code bugs from contract gaps | Claude Code, Codex, generic |
 | `/cvg-code-review-feedback` | Classify and handle code-review blockers inside the worker session | Claude Code, Codex, generic |
-| `/cvg-plan-loop` | Orchestrate planner -> fresh plan review -> repair -> final fresh review | Claude Code, Codex |
-| `/cvg-build-loop` | Orchestrate worker -> fresh code review -> repair -> final fresh review -> QA gates | Claude Code, Codex |
+| `/cvg-plan-loop` | Orchestrate planner -> independent plan review -> repair -> focused recheck | Claude Code, Codex |
+| `/cvg-build-loop` | Orchestrate worker -> independent review -> repair -> focused recheck -> acceptance | Claude Code, Codex |
 | `/cvg-hybrid-plan-loop` | Plan loop preset: Fable plans, Codex (gpt-5.6-sol high) reviews | Claude Code |
 | `/cvg-hybrid-build-loop` | Build loop preset: Codex implements and reviews first, Fable holds the final exit gate | Claude Code |
 
@@ -313,13 +313,13 @@ return raw JSON against the shared findings schema
 | Persona | Used by | When |
 | --- | --- | --- |
 | `best-practices-researcher` | `/cvg-plan` | non-obvious design work |
-| `repo-research-analyst` | `/cvg-plan` | always |
-| `correctness-reviewer` | `/cvg-code-review` | always |
-| `testing-reviewer` | `/cvg-code-review` | always |
+| `repo-research-analyst` | `/cvg-plan` | bounded codebase uncertainty |
+| `correctness-reviewer` | `/cvg-code-review` | complex state or ownership risk |
+| `testing-reviewer` | `/cvg-code-review` | uncertain behavioral evidence |
 | `security-reviewer` | `/cvg-code-review` | auth, input, permissions, data handling |
-| `adversarial-reviewer` | `/cvg-code-review` | large or high-risk diffs |
+| `adversarial-reviewer` | `/cvg-code-review` | severe failure or abuse consequences |
 | `reliability-reviewer` | `/cvg-code-review` | error handling, retries, timeouts, jobs |
-| `feasibility-reviewer` | `/cvg-plan-review` | standard and full plans |
+| `feasibility-reviewer` | `/cvg-plan-review` | uncertain feasibility or dependencies |
 | `security-lens-reviewer` | `/cvg-plan-review` | auth, data, external APIs, secrets |
 | `scope-guardian-reviewer` | `/cvg-plan-review` | many slices or scope creep |
 
@@ -343,14 +343,11 @@ worktree it would leak earlier rounds' findings to the next fresh reviewer:
 
 ## Cost and Fit
 
-**What a loop spends.** A build-loop run is one worker session, a fresh
-reviewer per round (each dispatching two or more sub-reviewer agents),
-focused re-reviews, and a final fresh pass — expect roughly an order of
-magnitude more tokens than telling an agent to "just implement it" (our
-observed runs, not a benchmark). That is the price
-of independent review, and it is why the loop is capped at three rounds. The
-six base skills used standalone cost roughly what any single-session skill
-costs; `claude plugin details convergo` shows the per-skill token numbers.
+**What a loop spends.** A worker and an independent reviewer, with focused
+rechecks for repairs. Auxiliaries are risk-selected; further full reviews are
+conditional. Cost depends on the work and evidence required, so no fixed token
+multiplier is promised. Standalone role skills remain available for bounded
+work that does not need orchestration.
 
 **What the loops require.** Orchestration needs real sub-session primitives:
 background agents on Claude Code, threads on Codex. If the host cannot
@@ -463,6 +460,7 @@ bun run eval:trigger   # LLM eval: skill descriptions route the right prompts
 bun run eval:wrapper   # wrapper-compliance scenarios + per-rule ablation
 bun run eval:repin     # codex ground truth: resume drops the -m pin; -c re-pin holds
 bun run eval:scoping   # orchestrator cross-repo scoping scenarios
+bun run eval:convergence # intent, repair and exit decision fixtures
 ```
 
 ### Source layout and generated builds
@@ -507,7 +505,7 @@ scenarios, baselines, and ablation results.
 Before releases that touch the loop skills, run the manual gate:
 [docs/loop-smoke-test.md](docs/loop-smoke-test.md), a seeded-bug micro
 build-loop that exercises spawn, fresh review, feedback-to-same-worker,
-focused re-review, and the final fresh exit on the Claude Code transport.
+focused re-review, and the bounded exit decision on the Claude Code transport.
 
 ### Load This Checkout Directly
 

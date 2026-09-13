@@ -1,6 +1,6 @@
 ---
 name: cvg-code-review-feedback
-description: "Handle code-review blocker findings returned to the worker session. Validate feedback, repair implementation-owned issues, or stop for plan and contract gaps."
+description: "Handle code-review blocker findings returned to the worker session. Validate feedback, repair implementation-owned issues, or pause dependent work on plan and contract gaps."
 ---
 
 # Code Review Feedback
@@ -13,11 +13,11 @@ accepted plan, behavior contract if present, implementation notes, base/head
 refs, current diff, and relevant changed files.
 
 Do not treat reviewer findings as a patch list. First decide whether each finding
-is an implementation-owned issue under the accepted plan and contract. Workers
-must stop for plan gaps, contract gaps, and systemic design gaps.
+is an implementation-owned issue under the accepted plan and contract. Pause only work dependent on a material unresolved behavior or scope decision.
 
 If the task context provides no coordination channel (standalone use), the
-coordination channel is the user: stop and ask directly.
+current conversation is the channel. Ask only for a material unresolved decision;
+continue independent authorized work.
 
 ## Process
 
@@ -25,6 +25,7 @@ coordination channel is the user: stop and ask directly.
 
 Read:
 
+- original user outcome, non-goals and authorized changes,
 - accepted plan and "done when" criteria,
 - behavior contract or linked design notes, if present,
 - implementation notes,
@@ -32,6 +33,22 @@ Read:
 - exact reviewer blocker findings.
 
 ### 2. Evaluate each blocker
+
+Recheck the original outcome, non-goals, authorized changes and current product
+constraints before treating plan text as a requirement. A contract gap blocks
+only when it prevents required behavior or critical verification. Use the
+orchestrator's evidence-based adjudications as input, retaining the original
+finding and explaining any disagreement or new evidence.
+
+For materially added mechanisms, ask what required outcome or concrete
+constraint fails if they are removed. Consider deleting the cause or reusing
+existing behavior before prescribing more coordination, recovery, or guards.
+A counterfactual explanation is not an executed ablation experiment. Run an
+isolated removal experiment only when uncertainty could change the choice and
+it is within your role; preserve the baseline and verify affected behavior.
+Keep necessary privacy, integrity and failure protection even for rare schedules.
+Use existing finding fields to explain the consequence and smallest effective
+change; do not add a separate complexity report or demand a deletion quota.
 
 For each finding, decide whether it is:
 
@@ -66,11 +83,12 @@ For local code bugs, pattern bugs, and implementation-owned verification gaps:
 
 For plan gaps, contract gaps, and systemic design gaps:
 
-- stop and callback through the coordination channel,
+- pause dependent work and callback through the coordination channel,
 - state the missing plan or contract decision,
 - do not edit plans, contracts, surface matrices, acceptance criteria, or scope,
-- do not continue implementation until the planner or coordination channel
-  resolves the gap.
+- let the planner or orchestrator resolve source-backed technical omissions;
+  ask the user for changed product semantics, broader authorization or new risk
+  acceptance. Continue independent work within the existing goal.
 
 For reviewer clarification:
 
@@ -106,6 +124,6 @@ After acting, report:
 - Do not edit plans, behavior contracts, surface matrices, acceptance criteria, or
   scope.
 - Do not patch through missing behavior decisions.
-- Do not continue implementation after identifying a plan, contract, or systemic
-  design gap.
+- Do not implement through a material unresolved behavior decision. Continue
+  independent authorized work; ordinary implementation choices are yours.
 - Do not silently drop invalid or out-of-scope findings.

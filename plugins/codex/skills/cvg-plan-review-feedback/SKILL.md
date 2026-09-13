@@ -1,6 +1,6 @@
 ---
 name: cvg-plan-review-feedback
-description: "Handle plan-review blocker findings returned to the planner session. Validate feedback, revise plan-owned artifacts, or stop for missing decisions."
+description: "Handle plan-review blocker findings returned to the planner session. Validate feedback, revise plan-owned artifacts, or pause dependent work on missing decisions."
 ---
 
 # Plan Review Feedback
@@ -17,7 +17,8 @@ is valid under the accepted goal and current code reality, then revise only
 plan-owned artifacts.
 
 If the task context provides no coordination channel (standalone use), the
-coordination channel is the user: stop and ask directly.
+current conversation is the channel. Ask only for a material unresolved decision;
+continue independent authorized work.
 
 ## Process
 
@@ -32,6 +33,22 @@ Read:
 - exact reviewer blocker findings.
 
 ### 2. Evaluate each blocker
+
+Recheck the original outcome, non-goals, authorized changes and current product
+constraints before treating plan text as a requirement. A contract gap blocks
+only when it prevents required behavior or critical verification. Use the
+orchestrator's evidence-based adjudications as input, retaining the original
+finding and explaining any disagreement or new evidence.
+
+For materially added mechanisms, ask what required outcome or concrete
+constraint fails if they are removed. Consider deleting the cause or reusing
+existing behavior before prescribing more coordination, recovery, or guards.
+A counterfactual explanation is not an executed ablation experiment. Run an
+isolated removal experiment only when uncertainty could change the choice and
+it is within your role; preserve the baseline and verify affected behavior.
+Keep necessary privacy, integrity and failure protection even for rare schedules.
+Use existing finding fields to explain the consequence and smallest effective
+change; do not add a separate complexity report or demand a deletion quota.
 
 For each finding, decide whether it is:
 
@@ -57,8 +74,9 @@ For valid plan gaps and source-backed contract gaps:
 
 For decision-required contract gaps:
 
-- stop and callback through the coordination channel,
-- state the missing decision and the blocked plan section,
+- pause dependent work and callback through the coordination channel,
+- state the missing material decision and its affected plan section; resolve
+  source-backed details without repeating user approval,
 - do not invent behavior.
 
 For reviewer clarification:

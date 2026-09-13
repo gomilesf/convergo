@@ -80,3 +80,21 @@ assert content.
   children at process exit (verified), so no scenario can observe a
   cross-process ARMED-then-relay gap; `arm-fast` (slow stub, phase 1 only)
   and `relay-on-request` (fast stub, both phases) split that coverage.
+
+## Intent and convergence decisions (`bun run eval:convergence`)
+
+Nine fixed fixtures check unnecessary cache/merge machinery, a wrong product
+outcome hidden by green tests, focused exit, new evidence, a necessary privacy
+guard, missing extension-load acceptance, optional auxiliary identities and
+required independent signatures. The grader receives expected choices;
+the model receives only task facts and neutral decision options. Read the saved
+reasons as well as the decision score. This is decision coverage, not proof of a
+real multi-agent lifecycle or an implemented repair.
+
+The runner disables tools and MCP, uses a temporary cwd, records raw results,
+model usage and timings, and fails on timeout, CLI errors or malformed answers.
+`EVAL_MODEL` selects the model (default `sonnet`). Compare the same fixtures and
+model with a frozen source tree using `--skills-root /path/to/skills-src`.
+`--ablate` removes the necessity paragraph for the two relevant repair fixtures;
+`--case <id>` runs one case. If removal preserves behavior, do not claim that
+paragraph is proven necessary. Real lifecycle validation remains the smoke test.

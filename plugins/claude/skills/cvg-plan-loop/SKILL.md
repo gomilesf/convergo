@@ -1,6 +1,6 @@
 ---
 name: cvg-plan-loop
-description: Orchestrate a monitored planning loop where a planner drafts the plan and fresh plan reviewers gate the exit. Use when the user asks to create or revise a plan through supervised specialist sessions on Codex threads or Claude Code background agents.
+description: Orchestrate a monitored planning loop where a planner drafts the plan and independent plan review with focused rechecks gates completion. Use when the user asks to create or revise a plan through supervised specialist sessions on Codex threads or Claude Code background agents.
 argument-hint: "[planning goal, requirements path, behavior contract path, or planning prompt]"
 ---
 
@@ -8,14 +8,14 @@ argument-hint: "[planning goal, requirements path, behavior contract path, or pl
 
 Use this skill for plan-only cvg-multi-session orchestration.
 
-Before doing anything, open and read `references/cvg-multi-session-protocol.md`, then apply the protocol gates from `cvg-multi-session`:
+Read `references/cvg-multi-session-protocol.md` once when entering the loop, then apply the protocol gates from `cvg-multi-session`:
 
 - transport binding gate,
 - real specialist session gate,
 - orchestrator callback transport gate,
 - waiting handoff gate,
 - cvg-plan-review-feedback gate,
-- fresh-reviewer exit gate.
+- independent-review exit gate.
 
 Do not implement product code in this workflow.
 
@@ -75,6 +75,8 @@ session and verify its id per Gate 1.
 
 Reviewer prompt must include:
 
+- original user outcome, non-goals and authorized changes,
+- required independent reviewer signatures, if the user specified any,
 - role: fresh plan reviewer,
 - the line `Do not consult project memory, prior sessions, rollout summaries, or external history. The repository's own git history (log, blame, commit messages) is repo evidence, not external history.` before the required skill line,
 - callback destination per Gate 2,
@@ -114,7 +116,8 @@ Blocking plan findings include:
 
 If the reviewer reports blockers, send the reviewer feedback to the same verified planner session with the continue operation (Gate 0).
 
-Do not classify findings, choose revision strategy, filter reviewer output, or turn the review into an edit list in the orchestrator.
+Adjudicate per Gate 4 before routing; retain original findings and reasons in
+the loop ledger.
 
 The feedback prompt must include:
 
@@ -123,7 +126,8 @@ The feedback prompt must include:
 - required feedback skill: `cvg-plan-review-feedback`,
 - original planning goal and source prompt,
 - current plan path and related contracts,
-- exact reviewer blocker findings appended under a `Plan Review Feedback Input` section,
+- exact reviewer findings and evidence-based adjudications under a
+  `Plan Review Feedback Input` section,
 - task-specific external side-effect boundary,
 - callback transport block,
 - callback template.
@@ -151,30 +155,14 @@ If the planner reports a contract decision, escalation, or clarification need, r
 
 If same reviewer still finds blockers, repeat Phase 3.
 
-If same reviewer passes, do not exit. Continue to Phase 5.
+If the same reviewer passes, evaluate completion in Phase 5.
 
-## Phase 5: Final Fresh Review
+## Phase 5: Review Exit
 
-Spawn a new fresh reviewer specialist session for a complete first review of the revised plan. Verify its id per Gate 1.
-
-Use the same minimal reviewer prompt shape from Phase 2. The new fresh reviewer
-must deliver its callback to the orchestrator per Gate 2; do not accept a
-result left only inside the specialist session when the platform requires an
-explicit callback send.
-
-Final exit condition:
-
-- new fresh reviewer,
-- complete first review,
-- no blocking findings.
-
-Only then can the orchestrator declare the plan loop complete.
-
-If the final fresh reviewer finds blockers, repeat from Phase 3. Each
-Phase 3-5 cycle is one round; after 3 rounds without a clean final review,
-stop and escalate to the user with all open findings and their adjudications
-(Gate 5 round cap). Apply the Gate 5 adjudication ratchet: findings previously
-adjudicated invalid or out of scope cannot re-block without new evidence.
+Apply Gate 5 for completion, new full-review conditions, adjudications and the
+original repair-round cap. When another full review is warranted, use the
+Phase 2 prompt and verify the new specialist identity. Carry non-blocking P2
+notes into the completion summary.
 
 ## Completion Summary
 
@@ -185,5 +173,5 @@ Report:
 - reviewer specialist ids,
 - callback transport status,
 - blockers and planner `cvg-plan-review-feedback` results,
-- final fresh reviewer verdict,
+- independent review verdict and focused rechecks,
 - known gaps.

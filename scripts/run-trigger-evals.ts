@@ -6,11 +6,13 @@
 // current source; distractor descriptions from evals/trigger/cases.json
 // compete in every case so convergo must win against a realistic skill list.
 // Usage: bun run eval:trigger [-- --runs 3]
-import { readFileSync, readdirSync } from "node:fs"
+import { readFileSync, readdirSync, mkdtempSync } from "node:fs"
+import { tmpdir } from "node:os"
 import path from "node:path"
 import { PLATFORM_SKILL_ROOTS } from "../src/metadata"
 
 const ROOT = process.cwd()
+const evalCwd = mkdtempSync(path.join(tmpdir(), "cvg-trigger-"))
 
 type TriggerCase = { id: string; tags?: string[]; prompt: string; expect: string | string[] | null }
 type Distractor = { name: string; description: string }
@@ -58,14 +60,21 @@ for (const testCase of cases) {
 }
 
 function ask(question: string): string {
-  const proc = Bun.spawnSync(["claude", "-p", "--model", model, question], {
+  const proc = Bun.spawnSync(["claude", "-p", "--model", model, "--output-format", "json",
+    "--permission-mode", "dontAsk", "--tools", "", "--strict-mcp-config",
+    "--mcp-config", '{"mcpServers":{}}', "--setting-sources", "", "--no-session-persistence", question], {
+    cwd: evalCwd,
+    timeout: 180_000,
     stdout: "pipe",
     stderr: "pipe",
   })
   if (proc.exitCode !== 0) {
     throw new Error(`claude -p failed: ${proc.stderr.toString().slice(0, 300)}`)
   }
-  const lines = proc.stdout.toString().trim().split("\n")
+  const envelope = JSON.parse(proc.stdout.toString())
+  if (envelope.is_error || envelope.subtype !== "success" || envelope.permission_denials?.length)
+    throw new Error(`CLI did not complete cleanly: ${envelope.subtype}`)
+  const lines = String(envelope.result ?? "").trim().split("\n")
   const raw = lines[lines.length - 1].trim().toLowerCase().replace(/[`*."']/g, "")
   // accept plugin-qualified answers like "convergo:cvg-plan"
   return raw.includes(":") ? raw.slice(raw.lastIndexOf(":") + 1) : raw

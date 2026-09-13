@@ -1,6 +1,6 @@
 ---
 name: cvg-build-loop
-description: Orchestrate a monitored implementation loop where a worker implements the plan and fresh code reviewers gate the exit. Use when the user asks to run a supervised implementation or build loop on Codex threads or Claude Code background agents.
+description: Orchestrate a monitored implementation loop where a worker implements the plan and independent code review with focused rechecks gates completion. Use when the user asks to run a supervised implementation or build loop on Codex threads or Claude Code background agents.
 argument-hint: "[plan path, base commit, or implementation goal]"
 ---
 
@@ -8,14 +8,14 @@ argument-hint: "[plan path, base commit, or implementation goal]"
 
 Use this skill for implementation work that should be executed by a monitored specialist worker and reviewed by monitored specialist reviewers.
 
-Before doing anything, open and read `references/cvg-multi-session-protocol.md`, then apply the protocol gates from `cvg-multi-session`:
+Read `references/cvg-multi-session-protocol.md` once when entering the loop, then apply the protocol gates from `cvg-multi-session`:
 
 - transport binding gate,
 - real specialist session gate,
 - orchestrator callback transport gate,
 - waiting handoff gate,
 - cvg-code-review-feedback gate,
-- fresh-reviewer exit gate.
+- independent-review exit gate.
 
 ## Phase 0: Orchestrator Setup
 
@@ -48,6 +48,7 @@ verifiable, do not continue.
 Worker prompt must include:
 
 - role: implementation worker,
+- original user outcome, non-goals, authorized changes and applicable constraints,
 - callback destination per Gate 2,
 - required work skill, such as `cvg-work` or another user-specified implementation skill,
 - base commit,
@@ -89,11 +90,12 @@ After the worker callback is visible, spawn a fresh reviewer specialist session.
 
 Reviewer prompt must include:
 
-- role: fresh code reviewer,
+- role: independent code reviewer,
+- original user outcome, non-goals and authorized changes,
 - the line `Do not consult project memory, prior sessions, rollout summaries, or external history. The repository's own git history (log, blame, commit messages) is repo evidence, not external history.` before the required skill line,
 - callback destination per Gate 2,
 - required cvg-code-review skill, such as `cvg-code-review`,
-- review mode when this reviewer is the final exit gate,
+- required independent reviewer signatures, if the user specified any,
 - base commit and head commit,
 - plan path and implementation notes path when present,
 - `git diff <base>..HEAD`,
@@ -124,23 +126,26 @@ its verified task id before creating the heartbeat.
 
 Complete the waiting handoff per Gate 3 and end the active turn while waiting.
 
-Reviewer should report blocking findings only:
+Reviewer should prioritize blocking findings grounded in the original outcome
+or applicable constraints, not merely a draft-plan requirement:
 
 - P0/P1 code bug,
 - unmet plan criterion,
 - missing real surface,
-- contract gap,
+- contract gap preventing required behavior or critical verification,
 - unsafe side-effect path,
 - missing required migration, rollback, deletion, privacy, or verification gate,
 - test/build/deploy gate missing where the plan requires it.
 
-Non-blocking quality notes belong in a separate quality review unless the orchestrator requested them here.
+Report relevant non-blocking notes once in the existing result; do not create
+a separate review merely because optional improvements remain.
 
 ## Phase 3: Return Review Feedback to Worker
 
 After the reviewer callback is visible, send the reviewer feedback to the same verified worker session with the continue operation (Gate 0).
 
-Do not classify findings, choose repair strategy, filter reviewer output, or turn the review into a patch list in the orchestrator.
+Adjudicate per Gate 4 before routing; retain original findings and reasons in
+the loop ledger.
 
 Feedback prompt must include:
 
@@ -149,14 +154,15 @@ Feedback prompt must include:
 - required feedback skill: `cvg-code-review-feedback`,
 - plan path, implementation notes path when present, base commit, review head,
   and current head,
-- exact reviewer blocker findings appended under a `Code Review Feedback Input` section,
+- exact reviewer findings and evidence-based adjudications under a
+  `Code Review Feedback Input` section,
 - task-specific external-side-effect boundary,
 - callback transport block,
 - callback template.
 
 Do not restate the feedback skill's intake, classification, or repair rules.
-The exact findings under `Code Review Feedback Input` plus the required skill
-are the worker's authority.
+The original goal and applicable constraints govern the repair; the exact
+findings and adjudications are evidence for the worker's intake.
 
 Worker feedback callback template:
 
@@ -193,36 +199,19 @@ coverage.
 
 Complete the waiting handoff per Gate 3 and end the active turn.
 
-## Phase 5: New Fresh Review
+## Phase 5: Review Exit
 
-After same reviewer passes, spawn a new fresh code reviewer specialist session for a complete first review. Verify it per Gate 1.
-
-Use the same minimal reviewer prompt shape from Phase 2. The new fresh reviewer
-prompt must include `Review mode: final-fresh-exit`. It must deliver its
-callback to the orchestrator per Gate 2; do not accept a result left only
-inside the specialist session when the platform requires an explicit callback
-send. Do not include previous reviewer verdicts, blocker text, focused re-review results, or worker repair summaries; include only independent risk-area labels if needed.
-
-Final implementation exit condition:
-
-- new fresh reviewer,
-- complete first code review,
-- no blocking findings of any class, including code bugs, contract gaps, unsafe side-effect paths, missing real surfaces, missing lifecycle coverage, or missing required gates.
-- audit artifact shows every selected auxiliary reviewer dispatched with a
-  non-null `agent_id`; inline auxiliary coverage cannot satisfy the final implementation exit condition.
-
-A "ready with fixes" verdict (only non-blocking P2 findings remain) satisfies
-the exit condition; carry the P2 list into the completion summary.
-
-If the new fresh reviewer finds blockers, repeat from Phase 3. Each Phase 3-5
-cycle is one round; after 3 rounds without a clean exit, stop and escalate to
-the user with all open findings and their adjudications (Gate 5 round cap).
-Apply the Gate 5 adjudication ratchet: findings previously adjudicated invalid
-or out of scope cannot re-block without new evidence.
+Apply Gate 5 for completion, new full-review conditions, adjudications and the
+original repair-round cap. When another full review is warranted, use the
+Phase 2 prompt and verify the new specialist identity. Carry non-blocking P2
+notes into the completion summary.
 
 ## Phase 6: QA and External Verification
 
-If the plan requires integration, staging, deployment, end-to-end, or smoke checks, run them through a QA or ops worker after code review is clean, unless the plan explicitly orders them earlier.
+Run the shortest authorized goal-specific smoke early enough to catch an
+unusable artifact. Complete required integration, staging or end-to-end gates
+on the integrated result; reuse still-valid evidence. External actions require
+the applicable authorization, not merely an entry in the plan.
 
 QA worker prompt must include:
 
@@ -239,7 +228,7 @@ Classify QA failures before routing:
 
 - frontend bug,
 - backend bug,
-- contract gap,
+- contract gap preventing required behavior or critical verification,
 - data/setup issue,
 - ops/config issue,
 - tooling limitation,
@@ -269,7 +258,7 @@ Report:
 - callback transport status,
 - review findings and worker `cvg-code-review-feedback` results,
 - repair commits,
-- final fresh reviewer result,
+- independent review result and any focused rechecks,
 - QA evidence and gates,
 - known gaps,
 - whether external side effects were performed and restored.
