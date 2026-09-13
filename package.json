@@ -1,6 +1,6 @@
 {
   "name": "convergo",
-  "version": "0.5.2",
+  "version": "0.6.0",
   "description": "Intent-driven planning, implementation and independent review with bounded repairs",
   "type": "module",
   "private": true,
